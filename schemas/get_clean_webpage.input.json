@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "get_clean_webpage — input",
+  "type": "object",
+  "required": ["url"],
+  "additionalProperties": false,
+  "properties": {
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "The full URL of the webpage to fetch"
+    },
+    "timeout": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 120,
+      "default": 15,
+      "description": "HTTP request timeout in seconds (1–120)"
+    },
+    "max_chars": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 10000,
+      "description": "Maximum characters to return (0 = unlimited)"
+    }
+  }
+}
