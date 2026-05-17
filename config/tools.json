@@ -41,6 +41,20 @@
       "script": "tools/python/youtube_download.py",
       "description": "Download a YouTube video to the Downloads folder",
       "timeout": 600
+    },
+    {
+      "name": "web_search",
+      "runtime": "python",
+      "script": "tools/python/web_search.py",
+      "description": "Search the web using DuckDuckGo and return results",
+      "timeout": 60
+    },
+    {
+      "name": "get_clean_webpage",
+      "runtime": "python",
+      "script": "tools/python/get_clean_webpage.py",
+      "description": "Fetch a webpage and return cleaned plain text with HTML/JS stripped",
+      "timeout": 30
     }
   ]
 }

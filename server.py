@@ -47,19 +47,47 @@ def download_file(url: str, save_path: str) -> dict:
 
 
 @mcp.tool()
-def youtube_download(url: str, retries: int = 3, timeout: int = 30, video_format: str = "bestvideo+bestaudio/best") -> dict:
-    """Download a YouTube video to the user's Downloads folder.
+def web_search(query: str, max_results: int = 5) -> dict:
+    """Search the web using DuckDuckGo and return the top results.
+
+    Args:
+        query: The search query string.
+        max_results: Number of results to return, between 1 and 20 (default 5).
+    """
+    return run_python("tools/python/web_search.py", [query, str(max_results)], timeout=60)
+
+
+@mcp.tool()
+def youtube_download(url: str, retries: int = 3, timeout: int = 30, video_format: str = "bestvideo+bestaudio/best", audio_format: str = "") -> dict:
+    """Download a YouTube video (or audio-only) to the user's Downloads folder.
 
     Args:
         url: Full YouTube video URL (watch?v=... or playlist link).
         retries: Number of download retries on transient errors (default 3).
         timeout: Socket timeout in seconds for each network operation (default 30).
         video_format: yt-dlp format string, e.g. 'best[ext=mp4]' or 'bestvideo+bestaudio/best' (default).
+        audio_format: When set, downloads audio only and converts to this format (e.g. 'mp3', 'm4a', 'opus'). Requires ffmpeg.
     """
     return run_python(
         "tools/python/youtube_download.py",
-        [url, str(retries), str(timeout), video_format],
+        [url, str(retries), str(timeout), video_format, audio_format],
         timeout=600,
+    )
+
+
+@mcp.tool()
+def get_clean_webpage(url: str, timeout: int = 15, max_chars: int = 10000) -> dict:
+    """Fetch a webpage and return its content as cleaned plain text with all HTML, JS, and boilerplate removed.
+
+    Args:
+        url: The full URL of the webpage to fetch.
+        timeout: HTTP request timeout in seconds, between 1 and 120 (default 15).
+        max_chars: Maximum characters to return; 0 means unlimited (default 10000).
+    """
+    return run_python(
+        "tools/python/get_clean_webpage.py",
+        [url, str(timeout), str(max_chars)],
+        timeout=timeout + 5,
     )
 
 
