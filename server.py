@@ -78,8 +78,7 @@ def _parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = _parse_args()
+    mcp.settings.host = args.host
+    mcp.settings.port = args.port
     logger.info("MCP server starting (transport=%s, host=%s, port=%s)", args.transport, args.host, args.port)
-    if args.transport == "stdio":
-        mcp.run()
-    else:
-        mcp.run(transport=args.transport, host=args.host, port=args.port)
+    mcp.run(transport=args.transport)
