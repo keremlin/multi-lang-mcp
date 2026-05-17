@@ -1,0 +1,46 @@
+{
+  "tools": [
+    {
+      "name": "windows_services",
+      "runtime": "powershell",
+      "script": "tools/powershell/services.ps1",
+      "description": "List Windows services",
+      "timeout": 30
+    },
+    {
+      "name": "read_file",
+      "runtime": "python",
+      "script": "tools/python/read_file.py",
+      "description": "Read a file from disk",
+      "timeout": 10
+    },
+    {
+      "name": "npm_package_info",
+      "runtime": "node",
+      "script": "tools/node/npm_info.js",
+      "description": "Fetch npm package metadata",
+      "timeout": 15
+    },
+    {
+      "name": "java_tool",
+      "runtime": "java",
+      "jar": "tools/java/build/ToolRunner.jar",
+      "description": "Run Java ToolRunner",
+      "timeout": 60
+    },
+    {
+      "name": "download_file",
+      "runtime": "python",
+      "script": "tools/python/download_file.py",
+      "description": "Download a file from a URL and save it to disk",
+      "timeout": 300
+    },
+    {
+      "name": "youtube_download",
+      "runtime": "python",
+      "script": "tools/python/youtube_download.py",
+      "description": "Download a YouTube video to the Downloads folder",
+      "timeout": 600
+    }
+  ]
+}

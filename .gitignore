@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+*.egg-info/
+
+# Java build artifacts
+tools/java/build/
+target/
+
+# Logs
+logs/
+
+# Claude Code settings
+.claude/
+
+# Accidental files
+=*
+
+# Node modules (if ever added)
+node_modules/
