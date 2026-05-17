@@ -21,10 +21,17 @@ def execute(
     """Run a subprocess, capture stdout/stderr, validate JSON output."""
     start = time.perf_counter()
 
+    # When there is no stdin payload, point stdin at DEVNULL so the subprocess
+    # never inherits the parent's stdin (which in stdio-MCP mode is the live
+    # protocol pipe and would cause HTTP libraries like primp/ddgs to hang).
+    stdin_kwargs = (
+        {"input": stdin_data} if stdin_data is not None else {"stdin": subprocess.DEVNULL}
+    )
+
     try:
         result = subprocess.run(
             cmd,
-            input=stdin_data,
+            **stdin_kwargs,
             capture_output=True,
             text=True,
             timeout=timeout,
