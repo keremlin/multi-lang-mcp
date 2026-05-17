@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "youtube_download — input",
+  "type": "object",
+  "required": ["url"],
+  "additionalProperties": false,
+  "properties": {
+    "url": {
+      "type": "string",
+      "description": "Full YouTube video or playlist URL"
+    },
+    "retries": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 3,
+      "description": "Number of download retries on transient errors"
+    },
+    "timeout": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 30,
+      "description": "Socket timeout in seconds for each network operation"
+    },
+    "video_format": {
+      "type": "string",
+      "default": "bestvideo+bestaudio/best",
+      "description": "yt-dlp format string, e.g. 'best[ext=mp4]' or 'bestvideo+bestaudio/best'"
+    }
+  }
+}

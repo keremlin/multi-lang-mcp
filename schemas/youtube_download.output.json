@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "youtube_download — output",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["success", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [true] },
+        "data": {
+          "type": "object",
+          "required": ["title", "url", "saved_to", "file_size_bytes", "file_size_mb", "status"],
+          "properties": {
+            "title":            { "type": "string", "description": "Video title as reported by YouTube" },
+            "url":              { "type": "string" },
+            "saved_to":         { "type": "string", "description": "Absolute path of the saved file" },
+            "file_size_bytes":  { "type": "integer", "minimum": 0 },
+            "file_size_mb":     { "type": "number",  "minimum": 0 },
+            "status":           { "type": "string",  "enum": ["completed"] },
+            "duration_seconds": { "type": ["integer", "null"] },
+            "uploader":         { "type": "string" },
+            "format":           { "type": "string", "description": "Actual format string selected by yt-dlp" }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["success", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [false] },
+        "error":   { "type": "string" }
+      }
+    }
+  ]
+}
