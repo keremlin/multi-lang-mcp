@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "web_search — output",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["success", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [true] },
+        "data": {
+          "type": "object",
+          "required": ["query", "result_count", "results"],
+          "properties": {
+            "query":        { "type": "string" },
+            "result_count": { "type": "integer", "minimum": 0 },
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["title", "url", "snippet"],
+                "properties": {
+                  "title":   { "type": "string" },
+                  "url":     { "type": "string" },
+                  "snippet": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["success", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [false] },
+        "error":   { "type": "string" }
+      }
+    }
+  ]
+}
