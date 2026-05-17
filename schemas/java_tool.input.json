@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "java_tool — input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "input_json": {
+      "type": "string",
+      "description": "JSON string passed to the Java tool via stdin. Defaults to '{}'.",
+      "default": "{}"
+    }
+  }
+}
