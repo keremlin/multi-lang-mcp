@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "npm_package_info — input",
+  "type": "object",
+  "required": ["package_name"],
+  "additionalProperties": false,
+  "properties": {
+    "package_name": {
+      "type": "string",
+      "description": "Exact npm package name (e.g. 'react', '@types/node')"
+    }
+  }
+}

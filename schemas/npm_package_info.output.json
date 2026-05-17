@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "npm_package_info — output",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["success", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [true] },
+        "data": {
+          "type": "object",
+          "required": ["name", "version"],
+          "properties": {
+            "name":        { "type": "string" },
+            "version":     { "type": "string" },
+            "description": { "type": ["string", "null"] },
+            "license":     { "type": ["string", "null"] },
+            "homepage":    { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["success", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [false] },
+        "error":   { "type": "string" }
+      }
+    }
+  ]
+}
