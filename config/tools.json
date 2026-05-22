@@ -55,6 +55,13 @@
       "script": "tools/python/get_clean_webpage.py",
       "description": "Fetch a webpage and return cleaned plain text with HTML/JS stripped",
       "timeout": 30
+    },
+    {
+      "name": "google_tts",
+      "runtime": "python",
+      "script": "tools/python/google_tts.py",
+      "description": "Convert text to speech using Google Cloud TTS API (OAuth2)",
+      "timeout": 60
     }
   ]
 }

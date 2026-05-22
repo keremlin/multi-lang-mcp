@@ -1,5 +1,9 @@
 import argparse
 import logging
+from pathlib import Path
+
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / ".env")
 
 from mcp.server.fastmcp import FastMCP
 
@@ -89,6 +93,36 @@ def get_clean_webpage(url: str, timeout: int = 15, max_chars: int = 10000) -> di
         [url, str(timeout), str(max_chars)],
         timeout=timeout + 5,
     )
+
+
+@mcp.tool()
+def google_tts(
+    text: str,
+    output_path: str,
+    voice: str = "en-US-Neural2-A",
+    language_code: str = "en-US",
+    audio_encoding: str = "MP3",
+) -> dict:
+    """Convert text (or SSML) to speech using Google Cloud TTS and save it to a file.
+
+    Args:
+        text: Plain text or SSML (wrap in <speak>...</speak>) to synthesize.
+        output_path: Absolute or relative path where the audio file will be saved.
+        voice: Google Cloud TTS voice name, e.g. 'en-US-Neural2-A' or 'de-DE-Neural2-F'.
+        language_code: BCP-47 language code, e.g. 'en-US' or 'de-DE'.
+        audio_encoding: Output audio format — one of MP3, LINEAR16, OGG_OPUS, MULAW, ALAW (default MP3).
+
+    Requires env vars: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN.
+    """
+    import json as _json
+    stdin = _json.dumps({
+        "text": text,
+        "output_path": output_path,
+        "voice": voice,
+        "language_code": language_code,
+        "audio_encoding": audio_encoding,
+    })
+    return run_python("tools/python/google_tts.py", stdin_data=stdin, timeout=60)
 
 
 def _parse_args() -> argparse.Namespace:

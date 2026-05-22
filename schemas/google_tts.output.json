@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "google_tts — output",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["success", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [true] },
+        "data": {
+          "type": "object",
+          "required": ["output_path", "bytes", "voice", "language_code", "audio_encoding", "char_count"],
+          "properties": {
+            "output_path":    { "type": "string", "description": "Absolute path of the saved audio file" },
+            "bytes":          { "type": "integer", "minimum": 1, "description": "Size of the audio file in bytes" },
+            "voice":          { "type": "string" },
+            "language_code":  { "type": "string" },
+            "audio_encoding": { "type": "string" },
+            "char_count":     { "type": "integer", "minimum": 0, "description": "Number of characters synthesized" }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["success", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [false] },
+        "error":   { "type": "string" }
+      }
+    }
+  ]
+}

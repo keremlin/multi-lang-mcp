@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "google_tts — input",
+  "type": "object",
+  "required": ["text", "output_path"],
+  "additionalProperties": false,
+  "properties": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Plain text or SSML (wrapped in <speak>...</speak>) to synthesize"
+    },
+    "output_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute or relative path where the audio file will be saved"
+    },
+    "voice": {
+      "type": "string",
+      "default": "en-US-Neural2-A",
+      "description": "Google Cloud TTS voice name, e.g. 'en-US-Neural2-A' or 'de-DE-Neural2-F'"
+    },
+    "language_code": {
+      "type": "string",
+      "default": "en-US",
+      "description": "BCP-47 language code matching the voice, e.g. 'en-US' or 'de-DE'"
+    },
+    "audio_encoding": {
+      "type": "string",
+      "enum": ["MP3", "LINEAR16", "OGG_OPUS", "MULAW", "ALAW"],
+      "default": "MP3",
+      "description": "Output audio format"
+    }
+  }
+}
