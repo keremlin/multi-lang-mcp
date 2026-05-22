@@ -71,6 +71,13 @@
       "timeout": 120
     },
     {
+      "name": "record_audio",
+      "runtime": "python",
+      "script": "tools/python/record_audio.py",
+      "description": "Record audio from the default microphone and save as a 16kHz mono WAV file",
+      "timeout": 135
+    },
+    {
       "name": "play_audio",
       "runtime": "python",
       "script": "tools/python/play_audio.py",

@@ -144,6 +144,20 @@ def groq_stt(
 
 
 @mcp.tool()
+def record_audio(output_path: str, duration: int = 5) -> dict:
+    """Record audio from the default microphone and save it as a WAV file.
+    Blocks for the full duration, then returns the saved file path.
+
+    Args:
+        output_path: Absolute or relative path where the WAV file will be saved.
+        duration: Recording length in seconds, 1–120 (default 5).
+
+    The file is saved at 16 kHz mono PCM — the native format for Groq STT (groq_stt tool).
+    """
+    return run_python("tools/python/record_audio.py", [output_path, str(duration)], timeout=duration + 15)
+
+
+@mcp.tool()
 def play_audio(audio_path: str) -> dict:
     """Play an audio file (MP3, WAV, OGG, FLAC) through the system speakers without opening a media player window.
     Blocks until playback is complete, then returns.

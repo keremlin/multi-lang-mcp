@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "record_audio — input",
+  "type": "object",
+  "required": ["output_path"],
+  "additionalProperties": false,
+  "properties": {
+    "output_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute or relative path where the WAV file will be saved"
+    },
+    "duration": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 120,
+      "default": 5,
+      "description": "Recording length in seconds (default 5)"
+    }
+  }
+}

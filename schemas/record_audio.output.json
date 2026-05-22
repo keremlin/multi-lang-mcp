@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "record_audio — output",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["success", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [true] },
+        "data": {
+          "type": "object",
+          "required": ["output_path", "duration_seconds", "sample_rate", "file_size_bytes"],
+          "properties": {
+            "output_path":      { "type": "string", "description": "Absolute path of the saved WAV file" },
+            "duration_seconds": { "type": "integer", "minimum": 1 },
+            "sample_rate":      { "type": "integer", "description": "Sample rate in Hz (always 16000)" },
+            "file_size_bytes":  { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["success", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [false] },
+        "error":   { "type": "string" }
+      }
+    }
+  ]
+}
