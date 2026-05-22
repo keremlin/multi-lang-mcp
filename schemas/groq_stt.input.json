@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "groq_stt — input",
+  "type": "object",
+  "required": ["audio_path"],
+  "additionalProperties": false,
+  "properties": {
+    "audio_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute or relative path to the audio file (MP3, MP4, WAV, WEBM, OGG, FLAC, M4A). Max 25 MB."
+    },
+    "language_code": {
+      "type": "string",
+      "default": "en",
+      "description": "ISO-639-1 language code of the spoken language, e.g. 'en' or 'de'"
+    },
+    "model": {
+      "type": "string",
+      "enum": ["whisper-large-v3-turbo", "whisper-large-v3"],
+      "default": "whisper-large-v3-turbo",
+      "description": "Groq Whisper model to use"
+    }
+  }
+}

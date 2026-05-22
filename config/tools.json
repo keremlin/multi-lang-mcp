@@ -62,6 +62,13 @@
       "script": "tools/python/google_tts.py",
       "description": "Convert text to speech using Google Cloud TTS API (OAuth2)",
       "timeout": 60
+    },
+    {
+      "name": "groq_stt",
+      "runtime": "python",
+      "script": "tools/python/groq_stt.py",
+      "description": "Transcribe an audio file to text using Groq Whisper API",
+      "timeout": 120
     }
   ]
 }

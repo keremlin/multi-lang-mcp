@@ -125,6 +125,24 @@ def google_tts(
     return run_python("tools/python/google_tts.py", stdin_data=stdin, timeout=60)
 
 
+@mcp.tool()
+def groq_stt(
+    audio_path: str,
+    language_code: str = "en",
+    model: str = "whisper-large-v3-turbo",
+) -> dict:
+    """Transcribe a local audio file to text using Groq's Whisper API.
+
+    Args:
+        audio_path: Absolute or relative path to the audio file (MP3, MP4, WAV, WEBM, OGG, FLAC, M4A). Max 25 MB.
+        language_code: ISO-639-1 language code of the spoken language, e.g. 'en' or 'de' (default en).
+        model: Groq Whisper model — 'whisper-large-v3-turbo' (default, fastest) or 'whisper-large-v3'.
+
+    Requires env var: GROQ_API_KEY.
+    """
+    return run_python("tools/python/groq_stt.py", [audio_path, language_code, model], timeout=120)
+
+
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Multi-language MCP server")
     p.add_argument(
