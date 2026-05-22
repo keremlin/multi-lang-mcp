@@ -69,6 +69,13 @@
       "script": "tools/python/groq_stt.py",
       "description": "Transcribe an audio file to text using Groq Whisper API",
       "timeout": 120
+    },
+    {
+      "name": "google_refresh_token",
+      "runtime": "python",
+      "script": "tools/python/google_refresh_token.py",
+      "description": "Refresh Google OAuth2 access token using the stored refresh token and update .env",
+      "timeout": 30
     }
   ]
 }

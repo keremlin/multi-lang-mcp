@@ -15,6 +15,9 @@ logs/
 # Claude Code settings
 .claude/
 
+# Environment / secrets
+.env
+
 # Accidental files
 =*
 

@@ -143,6 +143,19 @@ def groq_stt(
     return run_python("tools/python/groq_stt.py", [audio_path, language_code, model], timeout=120)
 
 
+@mcp.tool()
+def google_refresh_token() -> dict:
+    """Refresh the Google OAuth2 access token using the stored refresh token.
+
+    Calls Google's token endpoint with GOOGLE_REFRESH_TOKEN and writes the new
+    GOOGLE_ACCESS_TOKEN back into the .env file automatically.
+    No arguments needed — reads all credentials from the environment.
+
+    Requires env vars: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN.
+    """
+    return run_python("tools/python/google_refresh_token.py", timeout=30)
+
+
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Multi-language MCP server")
     p.add_argument(
