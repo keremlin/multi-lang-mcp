@@ -144,6 +144,17 @@ def groq_stt(
 
 
 @mcp.tool()
+def play_audio(audio_path: str) -> dict:
+    """Play an audio file (MP3, WAV, OGG, FLAC) through the system speakers without opening a media player window.
+    Blocks until playback is complete, then returns.
+
+    Args:
+        audio_path: Absolute or relative path to the audio file to play.
+    """
+    return run_python("tools/python/play_audio.py", [audio_path], timeout=600)
+
+
+@mcp.tool()
 def google_refresh_token() -> dict:
     """Refresh the Google OAuth2 access token using the stored refresh token.
 

@@ -71,6 +71,13 @@
       "timeout": 120
     },
     {
+      "name": "play_audio",
+      "runtime": "python",
+      "script": "tools/python/play_audio.py",
+      "description": "Play an audio file through the system speakers without opening a media player window",
+      "timeout": 600
+    },
+    {
       "name": "google_refresh_token",
       "runtime": "python",
       "script": "tools/python/google_refresh_token.py",

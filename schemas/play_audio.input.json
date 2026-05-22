@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "play_audio — input",
+  "type": "object",
+  "required": ["audio_path"],
+  "additionalProperties": false,
+  "properties": {
+    "audio_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute or relative path to the audio file (MP3, WAV, OGG, FLAC, M4A)"
+    }
+  }
+}
