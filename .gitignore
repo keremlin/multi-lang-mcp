@@ -23,3 +23,6 @@ logs/
 
 # Node modules (if ever added)
 node_modules/
+
+# Temporaty speaking voices 
+temp_audio/
