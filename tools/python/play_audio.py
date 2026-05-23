@@ -8,6 +8,8 @@ SUPPORTED_EXTS = {".mp3", ".wav", ".ogg", ".flac", ".m4a"}
 
 # Keep SDL from opening a display or audio device popup on Windows
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+# Suppress pygame's startup banner so stdout stays clean JSON
+os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 
 def main():
