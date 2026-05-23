@@ -144,17 +144,26 @@ def groq_stt(
 
 
 @mcp.tool()
-def record_audio(output_path: str, duration: int = 5) -> dict:
-    """Record audio from the default microphone and save it as a WAV file.
-    Blocks for the full duration, then returns the saved file path.
+def record_audio(
+    output_path: str,
+    max_seconds: float = 15.0,
+    silence_threshold: float = 1.5,
+) -> dict:
+    """Record audio from the default microphone, stopping automatically when silence is detected.
 
     Args:
         output_path: Absolute or relative path where the WAV file will be saved.
-        duration: Recording length in seconds, 1–120 (default 5).
+        max_seconds: Hard safety limit in seconds, 1–120 (default 15). Recording always stops by this time.
+        silence_threshold: RMS amplitude below which audio counts as silence, 0–32767 scale (default 1.5).
+                           Raise this in noisy environments. Recording stops after 1.5 s of consecutive silence.
 
     The file is saved at 16 kHz mono PCM — the native format for Groq STT (groq_stt tool).
     """
-    return run_python("tools/python/record_audio.py", [output_path, str(duration)], timeout=duration + 15)
+    return run_python(
+        "tools/python/record_audio.py",
+        [output_path, str(max_seconds), str(silence_threshold)],
+        timeout=int(max_seconds) + 15,
+    )
 
 
 @mcp.tool()

@@ -22,16 +22,22 @@ def test_no_args_returns_error():
     assert "Usage" in result["error"]
 
 
-def test_invalid_duration_returns_error(tmp_path):
+def test_invalid_max_seconds_returns_error(tmp_path):
     result = run_script(str(tmp_path / "out.wav"), "abc")
     assert result["success"] is False
-    assert "integer" in result["error"].lower()
+    assert "number" in result["error"].lower()
 
 
-def test_duration_out_of_range_returns_error(tmp_path):
+def test_max_seconds_out_of_range_returns_error(tmp_path):
     result = run_script(str(tmp_path / "out.wav"), "200")
     assert result["success"] is False
     assert "between" in result["error"].lower()
+
+
+def test_invalid_silence_threshold_returns_error(tmp_path):
+    result = run_script(str(tmp_path / "out.wav"), "10", "notanumber")
+    assert result["success"] is False
+    assert "number" in result["error"].lower()
 
 
 def test_output_always_valid_json(tmp_path):
