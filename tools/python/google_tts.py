@@ -2,6 +2,11 @@ import sys
 import os
 import json
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Always reload .env so a freshly refreshed GOOGLE_ACCESS_TOKEN is picked up
+# even when the MCP server process has a stale value in os.environ.
+load_dotenv(Path(__file__).parent.parent.parent / ".env", override=True)
 
 VALID_ENCODINGS = {"MP3", "LINEAR16", "OGG_OPUS", "MULAW", "ALAW"}
 
