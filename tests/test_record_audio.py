@@ -34,7 +34,7 @@ def test_max_seconds_out_of_range_returns_error(tmp_path):
     assert "between" in result["error"].lower()
 
 
-def test_invalid_silence_threshold_returns_error(tmp_path):
+def test_invalid_silence_duration_returns_error(tmp_path):
     result = run_script(str(tmp_path / "out.wav"), "10", "notanumber")
     assert result["success"] is False
     assert "number" in result["error"].lower()

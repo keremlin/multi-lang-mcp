@@ -147,21 +147,21 @@ def groq_stt(
 def record_audio(
     output_path: str,
     max_seconds: float = 15.0,
-    silence_threshold: float = 1.5,
+    silence_duration: float = 1.5,
 ) -> dict:
     """Record audio from the default microphone, stopping automatically when silence is detected.
 
     Args:
         output_path: Absolute or relative path where the WAV file will be saved.
         max_seconds: Hard safety limit in seconds, 1–120 (default 15). Recording always stops by this time.
-        silence_threshold: RMS amplitude below which audio counts as silence, 0–32767 scale (default 1.5).
-                           Raise this in noisy environments. Recording stops after 1.5 s of consecutive silence.
+        silence_duration: Consecutive seconds of quiet after speech that triggers stop (default 1.5).
+                          Thresholds are auto-calibrated from ambient noise — no manual tuning needed.
 
     The file is saved at 16 kHz mono PCM — the native format for Groq STT (groq_stt tool).
     """
     return run_python(
         "tools/python/record_audio.py",
-        [output_path, str(max_seconds), str(silence_threshold)],
+        [output_path, str(max_seconds), str(silence_duration)],
         timeout=int(max_seconds) + 15,
     )
 

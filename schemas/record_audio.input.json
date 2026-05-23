@@ -17,11 +17,12 @@
       "default": 15,
       "description": "Hard safety limit in seconds — recording always stops by this time (default 15)"
     },
-    "silence_threshold": {
+    "silence_duration": {
       "type": "number",
-      "minimum": 0,
+      "minimum": 0.3,
+      "maximum": 10,
       "default": 1.5,
-      "description": "RMS amplitude below which audio is considered silence on a 0–32767 scale (default 1.5). Raise in noisy environments."
+      "description": "Consecutive seconds of quiet after speech that triggers stop (default 1.5). Speech and silence thresholds are auto-calibrated from ambient noise."
     }
   }
 }
