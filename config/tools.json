@@ -97,6 +97,34 @@
       "script": "tools/python/telegram_download.py",
       "description": "Download audio files from a Telegram channel using a stored MTProto session",
       "timeout": 300
+    },
+    {
+      "name": "chroma_list_collections",
+      "runtime": "python",
+      "script": "tools/python/chroma_list_collections.py",
+      "description": "List all collections in the ChromaDB instance",
+      "timeout": 15
+    },
+    {
+      "name": "chroma_query",
+      "runtime": "python",
+      "script": "tools/python/chroma_query.py",
+      "description": "Semantic search in a ChromaDB collection using sentence-transformers embeddings",
+      "timeout": 60
+    },
+    {
+      "name": "chroma_add_document",
+      "runtime": "python",
+      "script": "tools/python/chroma_add_document.py",
+      "description": "Upsert one or more documents into a ChromaDB collection",
+      "timeout": 60
+    },
+    {
+      "name": "chroma_get_document",
+      "runtime": "python",
+      "script": "tools/python/chroma_get_document.py",
+      "description": "Fetch documents from a ChromaDB collection by their IDs",
+      "timeout": 30
     }
   ]
 }

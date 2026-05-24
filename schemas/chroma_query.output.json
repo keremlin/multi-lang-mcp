@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "chroma_query — output",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["success", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [true] },
+        "data": {
+          "type": "object",
+          "required": ["collection", "query", "results"],
+          "properties": {
+            "collection": { "type": "string" },
+            "query": { "type": "string" },
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "document", "metadata", "distance"],
+                "properties": {
+                  "id": { "type": "string" },
+                  "document": { "type": "string" },
+                  "metadata": { "type": ["object", "null"] },
+                  "distance": { "type": "number" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["success", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [false] },
+        "error": { "type": "string" }
+      }
+    }
+  ]
+}

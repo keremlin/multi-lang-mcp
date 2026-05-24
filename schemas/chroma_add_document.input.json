@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "chroma_add_document — input",
+  "type": "object",
+  "required": ["collection", "documents", "ids"],
+  "additionalProperties": false,
+  "properties": {
+    "collection": {
+      "type": "string",
+      "description": "Name of the ChromaDB collection to upsert into"
+    },
+    "documents": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "List of document texts to store"
+    },
+    "ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "Unique IDs for each document — must match documents length"
+    },
+    "metadatas": {
+      "type": "array",
+      "items": { "type": "object" },
+      "description": "Optional list of metadata dicts, one per document"
+    },
+    "create_if_missing": {
+      "type": "boolean",
+      "default": true,
+      "description": "Create the collection if it does not exist"
+    }
+  }
+}

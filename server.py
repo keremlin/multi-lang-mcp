@@ -205,6 +205,103 @@ def telegram_download(
 
 
 @mcp.tool()
+def chroma_list_collections() -> dict:
+    """List all collections in the ChromaDB instance.
+
+    Requires env vars: CHROMA_HOST (default 127.0.0.1), CHROMA_PORT (default 8001).
+    """
+    return run_python("tools/python/chroma_list_collections.py", timeout=15)
+
+
+@mcp.tool()
+def chroma_query(
+    collection: str,
+    query_text: str,
+    n_results: int = 5,
+    where: str = "",
+) -> dict:
+    """Semantic search in a ChromaDB collection using local sentence-transformers embeddings.
+
+    Args:
+        collection: Name of the ChromaDB collection to search.
+        query_text: Natural-language query string to embed and search.
+        n_results: Number of nearest neighbours to return (default 5).
+        where: Optional JSON object string with ChromaDB metadata filter, e.g. '{"category": "news"}'.
+
+    Requires env vars: CHROMA_HOST, CHROMA_PORT, CHROMA_EMBEDDING_MODEL (default all-MiniLM-L6-v2).
+    """
+    import json as _json
+    payload = {"collection": collection, "query_text": query_text, "n_results": n_results}
+    if where:
+        try:
+            payload["where"] = _json.loads(where)
+        except _json.JSONDecodeError:
+            return {"success": False, "error": "where must be valid JSON"}
+    return run_python("tools/python/chroma_query.py", stdin_data=_json.dumps(payload), timeout=60)
+
+
+@mcp.tool()
+def chroma_add_document(
+    collection: str,
+    documents: str,
+    ids: str,
+    metadatas: str = "",
+    create_if_missing: bool = True,
+) -> dict:
+    """Upsert one or more documents into a ChromaDB collection.
+
+    Args:
+        collection: Name of the ChromaDB collection.
+        documents: JSON array of document strings, e.g. '["text one", "text two"]'.
+        ids: JSON array of unique IDs matching documents, e.g. '["id1", "id2"]'.
+        metadatas: Optional JSON array of metadata dicts, e.g. '[{"source": "web"}]'.
+        create_if_missing: Create the collection if it does not exist (default true).
+
+    Requires env vars: CHROMA_HOST, CHROMA_PORT, CHROMA_EMBEDDING_MODEL.
+    """
+    import json as _json
+    try:
+        docs = _json.loads(documents)
+        doc_ids = _json.loads(ids)
+    except _json.JSONDecodeError as exc:
+        return {"success": False, "error": f"Invalid JSON in documents or ids: {exc}"}
+
+    payload = {
+        "collection": collection,
+        "documents": docs,
+        "ids": doc_ids,
+        "create_if_missing": create_if_missing,
+    }
+    if metadatas:
+        try:
+            payload["metadatas"] = _json.loads(metadatas)
+        except _json.JSONDecodeError:
+            return {"success": False, "error": "metadatas must be a valid JSON array"}
+
+    return run_python("tools/python/chroma_add_document.py", stdin_data=_json.dumps(payload), timeout=60)
+
+
+@mcp.tool()
+def chroma_get_document(collection: str, ids: str) -> dict:
+    """Fetch documents from a ChromaDB collection by their IDs.
+
+    Args:
+        collection: Name of the ChromaDB collection.
+        ids: JSON array of document IDs to retrieve, e.g. '["id1", "id2"]'.
+
+    Requires env vars: CHROMA_HOST, CHROMA_PORT.
+    """
+    import json as _json
+    try:
+        doc_ids = _json.loads(ids)
+    except _json.JSONDecodeError as exc:
+        return {"success": False, "error": f"Invalid JSON in ids: {exc}"}
+
+    payload = {"collection": collection, "ids": doc_ids}
+    return run_python("tools/python/chroma_get_document.py", stdin_data=_json.dumps(payload), timeout=30)
+
+
+@mcp.tool()
 def google_refresh_token() -> dict:
     """Refresh the Google OAuth2 access token using the stored refresh token.
 

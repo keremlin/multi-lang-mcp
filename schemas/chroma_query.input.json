@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "chroma_query — input",
+  "type": "object",
+  "required": ["collection", "query_text"],
+  "additionalProperties": false,
+  "properties": {
+    "collection": {
+      "type": "string",
+      "description": "Name of the ChromaDB collection to search"
+    },
+    "query_text": {
+      "type": "string",
+      "description": "Natural-language query to embed and search"
+    },
+    "n_results": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 5,
+      "description": "Number of nearest neighbours to return"
+    },
+    "where": {
+      "type": "object",
+      "description": "Optional ChromaDB metadata filter (e.g. {\"category\": \"news\"})"
+    }
+  }
+}
