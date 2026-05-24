@@ -24,9 +24,17 @@ logs/
 # Node modules (if ever added)
 node_modules/
 
-# Temporaty speaking voices
+# Temporary speaking voices
 temp_audio/
 
 # Telegram session files (contain active auth tokens)
 *.session
 *.session-journal
+
+# ChromaDB persisted data (may contain embedded documents)
+data/
+
+# Test / coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/

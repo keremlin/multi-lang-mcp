@@ -140,6 +140,44 @@ Get-Content logs\server.log -Wait -Tail 50
 
 ---
 
+## ChromaDB Vector Database
+
+ChromaDB runs as a companion Windows service (`ChromaDB`) on port 8001, alongside the MCP server. The four chroma MCP tools connect to it over HTTP — ChromaDB is never embedded inside the Python process.
+
+```
+Claude → MCP server (port 8080) → chroma_*.py tools → ChromaDB (port 8001)
+```
+
+Data is persisted to `data/chromadb/` (gitignored). The embedding model (`all-MiniLM-L6-v2`, ~80 MB) downloads to the HuggingFace cache on first use of `chroma_query` or `chroma_add_document`.
+
+### Service management
+
+`chroma_service.py` (mirrors `service.py`) wraps `chroma.exe` as a proper Windows service. `install_service.ps1` installs ChromaDB first, then the MCP server — order matters because the MCP server starts tools that may call ChromaDB immediately.
+
+```powershell
+# Check service state
+Get-Service ChromaDB
+sc.exe query ChromaDB
+```
+
+### Configuration (`.env`)
+
+```
+CHROMA_HOST=127.0.0.1          # where chroma_service.py binds
+CHROMA_PORT=8001               # port for HTTP API
+CHROMA_EMBEDDING_MODEL=all-MiniLM-L6-v2  # HuggingFace model name
+```
+
+These are runtime config, not secrets — no API keys needed. Change only if you run ChromaDB on a different host or port.
+
+### Dev mode (no service)
+
+```powershell
+.venv\Scripts\chroma.exe run --host 127.0.0.1 --port 8001 --path ./data/chromadb
+```
+
+---
+
 ## Logging
 
 ```
