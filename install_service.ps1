@@ -20,7 +20,32 @@ if (-not (Test-Path $python)) {
     exit 1
 }
 
-# Stop existing service if already installed
+# ── ChromaDB service ──────────────────────────────────────────────────────────
+$chromaSvc = Get-Service -Name "ChromaDB" -ErrorAction SilentlyContinue
+if ($chromaSvc) {
+    Write-Host "Removing existing ChromaDB service..." -ForegroundColor Yellow
+    if ($chromaSvc.Status -eq "Running") { Stop-Service "ChromaDB" -Force }
+    & $python "$root\chroma_service.py" remove
+    Start-Sleep -Seconds 2
+}
+
+Write-Host ""
+Write-Host "Installing ChromaDB Windows service..." -ForegroundColor Cyan
+& $python "$root\chroma_service.py" install
+Start-Sleep -Seconds 1
+
+Write-Host "Starting ChromaDB service..." -ForegroundColor Cyan
+Start-Service -Name "ChromaDB"
+Start-Sleep -Seconds 4
+
+$chromaSvc = Get-Service -Name "ChromaDB"
+if ($chromaSvc.Status -ne "Running") {
+    Write-Error "ChromaDB service failed to start. Check Windows Event Viewer → Windows Logs → Application."
+    exit 1
+}
+Write-Host "ChromaDB service is running." -ForegroundColor Green
+
+# ── MCP server service ────────────────────────────────────────────────────────
 $existing = Get-Service -Name "MultiLangMCP" -ErrorAction SilentlyContinue
 if ($existing) {
     Write-Host "Removing existing MultiLangMCP service..." -ForegroundColor Yellow

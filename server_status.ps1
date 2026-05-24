@@ -11,9 +11,21 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  Multi-Language MCP Server - Status"    -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-# 1. Windows Service
+# 1. Windows Services
 Write-Host ""
-Write-Host "[Windows Service]" -ForegroundColor White
+Write-Host "[Windows Service - ChromaDB]" -ForegroundColor White
+$chromaSvc = Get-Service -Name "ChromaDB" -ErrorAction SilentlyContinue
+if ($chromaSvc) {
+    $color = if ($chromaSvc.Status -eq "Running") { "Green" } else { "Red" }
+    Write-Host ("  Status    : {0}" -f $chromaSvc.Status) -ForegroundColor $color
+    Write-Host "  StartType : $($chromaSvc.StartType)"
+    Write-Host "  Display   : $($chromaSvc.DisplayName)"
+} else {
+    Write-Host "  Not installed" -ForegroundColor Gray
+}
+
+Write-Host ""
+Write-Host "[Windows Service - MultiLangMCP]" -ForegroundColor White
 $svc = Get-Service -Name "MultiLangMCP" -ErrorAction SilentlyContinue
 if ($svc) {
     $color = "Red"
