@@ -178,6 +178,33 @@ def play_audio(audio_path: str) -> dict:
 
 
 @mcp.tool()
+def telegram_download(
+    channel: str,
+    output_dir: str = "",
+    limit: int = 50,
+    min_id: int = 0,
+) -> dict:
+    """Download audio files (MP3, OGG, voice messages) from a Telegram channel.
+
+    Args:
+        channel: Channel username (e.g. '@mychannel') or numeric channel ID.
+        output_dir: Directory to save files. Defaults to ~/Downloads/telegram.
+        limit: Maximum number of messages to scan (default 50). Increase to fetch deeper history.
+        min_id: Only fetch messages with ID greater than this (use for incremental runs).
+
+    Requires a valid Telethon session at tools/python/tele_session.session.
+    """
+    import json as _json
+    stdin = _json.dumps({
+        "channel": channel,
+        "output_dir": output_dir,
+        "limit": limit,
+        "min_id": min_id,
+    })
+    return run_python("tools/python/telegram_download.py", stdin_data=stdin, timeout=300)
+
+
+@mcp.tool()
 def google_refresh_token() -> dict:
     """Refresh the Google OAuth2 access token using the stored refresh token.
 

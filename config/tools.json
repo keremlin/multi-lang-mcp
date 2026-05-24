@@ -90,6 +90,13 @@
       "script": "tools/python/google_refresh_token.py",
       "description": "Refresh Google OAuth2 access token using the stored refresh token and update .env",
       "timeout": 30
+    },
+    {
+      "name": "telegram_download",
+      "runtime": "python",
+      "script": "tools/python/telegram_download.py",
+      "description": "Download audio files from a Telegram channel using a stored MTProto session",
+      "timeout": 300
     }
   ]
 }

@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "telegram_download input",
+  "type": "object",
+  "required": ["channel"],
+  "additionalProperties": false,
+  "properties": {
+    "channel": {
+      "type": "string",
+      "description": "Channel username (e.g. '@mychannel') or numeric channel ID (e.g. '-1001234567890')"
+    },
+    "output_dir": {
+      "type": "string",
+      "description": "Directory to save downloaded files. Defaults to ~/Downloads/telegram if omitted.",
+      "default": ""
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Maximum number of messages to scan (default 50). Increase to reach older history.",
+      "minimum": 1,
+      "maximum": 10000,
+      "default": 50
+    },
+    "min_id": {
+      "type": "integer",
+      "description": "Only scan messages with ID greater than this value. Use the last downloaded message_id for incremental runs.",
+      "minimum": 0,
+      "default": 0
+    }
+  }
+}
