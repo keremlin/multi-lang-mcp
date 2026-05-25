@@ -302,6 +302,53 @@ def chroma_get_document(collection: str, ids: str) -> dict:
 
 
 @mcp.tool()
+def bluetooth_enable(state: str) -> dict:
+    """Enable or disable the system Bluetooth radio.
+
+    Args:
+        state: 'enable' to turn Bluetooth on, 'disable' to turn it off.
+    """
+    return run_powershell("tools/powershell/bluetooth_enable.ps1", [state], timeout=15)
+
+
+@mcp.tool()
+def bluetooth_scan(timeout_seconds: int = 10) -> dict:
+    """Scan for nearby and paired Bluetooth devices (Classic and BLE).
+
+    Args:
+        timeout_seconds: How long to scan in seconds, 3–60 (default 10).
+    """
+    return run_powershell("tools/powershell/bluetooth_scan.ps1", [str(timeout_seconds)], timeout=timeout_seconds + 15)
+
+
+@mcp.tool()
+def bluetooth_connect(name: str) -> dict:
+    """Connect to a paired Bluetooth device by name (full or partial match).
+
+    Uses Win32 BluetoothSetServiceState to enable Bluetooth services on the
+    device, triggering a persistent connection. The device must already be
+    paired with this PC and within Bluetooth range.
+
+    Args:
+        name: Full or partial device name, e.g. 'WH-1000XM4' or 'AirPods'.
+    """
+    return run_powershell("tools/powershell/bluetooth_connect.ps1", [name], timeout=30)
+
+
+@mcp.tool()
+def bluetooth_disconnect(name: str) -> dict:
+    """Disconnect a Bluetooth device by name (full or partial match).
+
+    Uses Win32 BluetoothSetServiceState to disable Bluetooth services on the
+    device, dropping the connection cleanly without leaving driver errors.
+
+    Args:
+        name: Full or partial device name, e.g. 'WH-1000XM4' or 'AirPods'.
+    """
+    return run_powershell("tools/powershell/bluetooth_disconnect.ps1", [name], timeout=15)
+
+
+@mcp.tool()
 def google_refresh_token() -> dict:
     """Refresh the Google OAuth2 access token using the stored refresh token.
 

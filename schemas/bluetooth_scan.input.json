@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "timeout_seconds": {
+      "type": "integer",
+      "minimum": 3,
+      "maximum": 60,
+      "default": 10,
+      "description": "How long to scan for nearby devices in seconds (default 10)"
+    }
+  },
+  "additionalProperties": false
+}
