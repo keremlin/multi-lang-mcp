@@ -26,6 +26,12 @@
       "description": "Only scan messages with ID greater than this value. Use the last downloaded message_id for incremental runs.",
       "minimum": 0,
       "default": 0
+    },
+    "max_id": {
+      "type": "integer",
+      "description": "Only scan messages with ID less than this value. Use to cap the upper bound and target a specific year range (e.g. min_id=26819, max_id=28431 for 2025-era messages).",
+      "minimum": 0,
+      "default": 0
     }
   }
 }

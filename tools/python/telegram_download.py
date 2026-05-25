@@ -74,7 +74,7 @@ def _safe_filename(name: str, fallback: str) -> str:
     return safe if safe else fallback
 
 
-async def _download(channel: str, output_dir: Path, limit: int, min_id: int) -> dict:
+async def _download(channel: str, output_dir: Path, limit: int, min_id: int, max_id: int = 0) -> dict:
     try:
         from telethon import TelegramClient
         from telethon.tl.types import (
@@ -110,7 +110,7 @@ async def _download(channel: str, output_dir: Path, limit: int, min_id: int) -> 
         channel_title = getattr(entity, "title", None) or getattr(entity, "username", channel)
         print(f"[telegram_download] Channel: {channel_title}", file=sys.stderr)
 
-        async for message in client.iter_messages(entity, limit=limit, min_id=min_id):
+        async for message in client.iter_messages(entity, limit=limit, min_id=min_id, max_id=max_id):
             if not message.media or not isinstance(message.media, MessageMediaDocument):
                 continue
 
@@ -207,8 +207,9 @@ def main():
 
     limit = int(params.get("limit", DEFAULT_LIMIT))
     min_id = int(params.get("min_id", 0))
+    max_id = int(params.get("max_id", 0))
 
-    result = asyncio.run(_download(channel, output_dir, limit, min_id))
+    result = asyncio.run(_download(channel, output_dir, limit, min_id, max_id))
     print(json.dumps(result))
 
 
