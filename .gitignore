@@ -34,6 +34,9 @@ temp_audio/
 # ChromaDB persisted data (may contain embedded documents)
 data/
 
+# Generated documents (exports, reports)
+doc/
+
 # Test / coverage artifacts
 .pytest_cache/
 .coverage

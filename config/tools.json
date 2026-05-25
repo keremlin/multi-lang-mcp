@@ -125,6 +125,34 @@
       "script": "tools/python/chroma_get_document.py",
       "description": "Fetch documents from a ChromaDB collection by their IDs",
       "timeout": 30
+    },
+    {
+      "name": "bluetooth_enable",
+      "runtime": "powershell",
+      "script": "tools/powershell/bluetooth_enable.ps1",
+      "description": "Enable or disable the system Bluetooth radio",
+      "timeout": 15
+    },
+    {
+      "name": "bluetooth_scan",
+      "runtime": "powershell",
+      "script": "tools/powershell/bluetooth_scan.ps1",
+      "description": "Scan for nearby and paired Bluetooth devices",
+      "timeout": 75
+    },
+    {
+      "name": "bluetooth_connect",
+      "runtime": "powershell",
+      "script": "tools/powershell/bluetooth_connect.ps1",
+      "description": "Connect to a paired Bluetooth device by name",
+      "timeout": 30
+    },
+    {
+      "name": "bluetooth_disconnect",
+      "runtime": "powershell",
+      "script": "tools/powershell/bluetooth_disconnect.ps1",
+      "description": "Disconnect a Bluetooth device by name (requires admin for PnP disable)",
+      "timeout": 15
     }
   ]
 }
