@@ -183,6 +183,7 @@ def telegram_download(
     output_dir: str = "",
     limit: int = 50,
     min_id: int = 0,
+    max_id: int = 0,
 ) -> dict:
     """Download audio files (MP3, OGG, voice messages) from a Telegram channel.
 
@@ -191,6 +192,7 @@ def telegram_download(
         output_dir: Directory to save files. Defaults to ~/Downloads/telegram.
         limit: Maximum number of messages to scan (default 50). Increase to fetch deeper history.
         min_id: Only fetch messages with ID greater than this (use for incremental runs).
+        max_id: Only fetch messages with ID less than this (caps upper bound; use to target a year range).
 
     Requires a valid Telethon session at tools/python/tele_session.session.
     """
@@ -200,8 +202,36 @@ def telegram_download(
         "output_dir": output_dir,
         "limit": limit,
         "min_id": min_id,
+        "max_id": max_id,
     })
     return run_python("tools/python/telegram_download.py", stdin_data=stdin, timeout=300)
+
+
+@mcp.tool()
+def telegram_download_by_ids(
+    channel: str,
+    message_ids: list,
+    output_dir: str = "",
+) -> dict:
+    """Download specific audio messages from a Telegram channel by message ID.
+
+    Fetches only the listed messages in a single round-trip using Telethon's
+    get_messages(ids=[...]) — no history scan required.
+
+    Args:
+        channel: Channel username (e.g. '@mychannel') or numeric channel ID.
+        message_ids: List of Telegram message IDs to download (integers).
+        output_dir: Directory to save files. Defaults to ~/Downloads/telegram.
+
+    Requires a valid Telethon session at tools/python/tele_session.session.
+    """
+    import json as _json
+    stdin = _json.dumps({
+        "channel": channel,
+        "message_ids": message_ids,
+        "output_dir": output_dir,
+    })
+    return run_python("tools/python/telegram_download_by_ids.py", stdin_data=stdin, timeout=600)
 
 
 @mcp.tool()

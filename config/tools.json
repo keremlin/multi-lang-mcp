@@ -99,6 +99,13 @@
       "timeout": 300
     },
     {
+      "name": "telegram_download_by_ids",
+      "runtime": "python",
+      "script": "tools/python/telegram_download_by_ids.py",
+      "description": "Download specific audio messages from a Telegram channel by message ID list",
+      "timeout": 600
+    },
+    {
       "name": "chroma_list_collections",
       "runtime": "python",
       "script": "tools/python/chroma_list_collections.py",

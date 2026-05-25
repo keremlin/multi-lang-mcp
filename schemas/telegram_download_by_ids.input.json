@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "telegram_download_by_ids input",
+  "type": "object",
+  "required": ["channel", "message_ids"],
+  "additionalProperties": false,
+  "properties": {
+    "channel": {
+      "type": "string",
+      "description": "Channel username (e.g. '@mychannel') or numeric channel ID"
+    },
+    "message_ids": {
+      "type": "array",
+      "description": "List of Telegram message IDs to download",
+      "items": { "type": "integer" },
+      "minItems": 1
+    },
+    "output_dir": {
+      "type": "string",
+      "description": "Directory to save files. Defaults to ~/Downloads/telegram",
+      "default": ""
+    }
+  }
+}
