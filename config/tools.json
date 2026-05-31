@@ -106,6 +106,13 @@
       "timeout": 600
     },
     {
+      "name": "telegram_search",
+      "runtime": "python",
+      "script": "tools/python/telegram_search.py",
+      "description": "Search for audio or video files in a Telegram channel by name, title, or artist — returns metadata and message IDs without downloading",
+      "timeout": 300
+    },
+    {
       "name": "chroma_list_collections",
       "runtime": "python",
       "script": "tools/python/chroma_list_collections.py",

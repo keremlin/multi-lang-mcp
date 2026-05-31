@@ -235,6 +235,37 @@ def telegram_download_by_ids(
 
 
 @mcp.tool()
+def telegram_search(
+    query: str,
+    channel: str = "",
+    media_type: str = "any",
+    limit: int = 50,
+) -> dict:
+    """Search for audio or video files across Telegram using Telegram's own search engine.
+
+    Works globally (like the Telegram app's search bar) or within a specific channel.
+    Returns metadata + message IDs for each match. Does NOT download files — use
+    telegram_download_by_ids with the returned message_ids to get the actual files.
+
+    Args:
+        query: Search string matched by Telegram's server-side engine (filenames, titles, artists).
+        channel: Channel username (e.g. '@mychannel') or numeric ID. Leave empty for global search.
+        media_type: Filter to 'audio', 'video', or 'any' (default). Use 'video' for films.
+        limit: Maximum results per media-type pass (default 50).
+
+    Requires a valid Telethon session at tools/python/tele_session.session.
+    """
+    import json as _json
+    stdin = _json.dumps({
+        "query": query,
+        "channel": channel,
+        "media_type": media_type,
+        "limit": limit,
+    })
+    return run_python("tools/python/telegram_search.py", stdin_data=stdin, timeout=300)
+
+
+@mcp.tool()
 def chroma_list_collections() -> dict:
     """List all collections in the ChromaDB instance.
 

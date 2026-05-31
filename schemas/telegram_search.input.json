@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "telegram_search input",
+  "type": "object",
+  "required": ["query"],
+  "additionalProperties": false,
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Search string — matched by Telegram's server-side engine against filenames, audio titles, and performers"
+    },
+    "channel": {
+      "type": "string",
+      "default": "",
+      "description": "Channel username (e.g. '@mychannel') or numeric ID to restrict search. Leave empty for global search across all of Telegram."
+    },
+    "media_type": {
+      "type": "string",
+      "enum": ["audio", "video", "any"],
+      "default": "any",
+      "description": "Restrict results to audio files, video/film files, or any media (default: 'any')"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Maximum results to return per media type pass (default 50).",
+      "minimum": 1,
+      "maximum": 1000,
+      "default": 50
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "telegram_search output",
+  "oneOf": [
+    {
+      "title": "Success",
+      "type": "object",
+      "required": ["success", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [true] },
+        "data": {
+          "type": "object",
+          "required": ["channel", "channel_title", "query", "media_type", "total_scanned", "match_count", "matches"],
+          "properties": {
+            "channel": { "type": "string" },
+            "channel_title": { "type": "string" },
+            "query": { "type": "string" },
+            "media_type": { "type": "string", "enum": ["audio", "video", "any"] },
+            "total_scanned": { "type": "integer", "description": "Total messages inspected during the search" },
+            "match_count": { "type": "integer" },
+            "matches": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["message_id", "filename", "title", "performer", "mime_type", "size_bytes", "size_mb"],
+                "properties": {
+                  "message_id": {
+                    "type": "integer",
+                    "description": "Telegram message ID — pass to telegram_download_by_ids to download this file"
+                  },
+                  "filename": { "type": "string", "description": "Original filename from the document attribute" },
+                  "title": { "type": "string", "description": "Audio metadata title (empty for video files)" },
+                  "performer": { "type": "string", "description": "Audio metadata artist/performer (empty for video files)" },
+                  "mime_type": { "type": "string" },
+                  "size_bytes": { "type": "integer" },
+                  "size_mb": { "type": "number" },
+                  "date": { "type": ["string", "null"], "description": "ISO 8601 message timestamp" },
+                  "duration_seconds": {
+                    "type": "integer",
+                    "description": "Media duration in seconds (present when available)"
+                  },
+                  "resolution": {
+                    "type": "string",
+                    "description": "Video resolution as 'WxH' (present for video files when available)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Error",
+      "type": "object",
+      "required": ["success", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "boolean", "enum": [false] },
+        "error": { "type": "string" }
+      }
+    }
+  ]
+}
