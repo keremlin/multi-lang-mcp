@@ -263,6 +263,65 @@ The allowlist is loaded once at import time. Restart the server after editing `t
 
 ---
 
+### Telegram Tools — Connection Gate
+
+All Telegram tool scripts (`telegram_download.py`, `telegram_download_by_ids.py`, `telegram_search.py`) follow two hard architectural rules enforced by an automated test in `tests/test_telegram_acl.py`:
+
+#### Rule 1 — Single point of security check
+
+Every Telegram tool script must obtain its `TelegramClient` exclusively through `get_client()` in `shared/telegram_config.py`. **No security logic may exist anywhere else.**
+
+`get_client(channel)` is the one place that checks, in order:
+1. `TELEGRAM_TOOLS_ENABLED` env var — server-side kill-switch
+2. Channel ACL — whitelist / blacklist from `config/telegram_channels.json`
+3. Credentials present — `TELEGRAM_API_ID` / `TELEGRAM_API_HASH`
+4. `telethon` installed
+
+It returns `(TelegramClient, "")` on success or `(None, error_message)` on any failure.
+
+`server.py` does **not** duplicate these checks. It only routes the call to `run_python`.
+
+#### Rule 2 — Tool scripts must not access `.env`
+
+Telegram tool scripts must **never**:
+- Call `load_dotenv()`
+- Read `os.environ.get("TELEGRAM_API_ID", ...)` or any `TELEGRAM_*` variable
+- Import `API_ID`, `API_HASH`, or `SESSION_PATH` from anywhere
+
+Credentials are private to `shared/telegram_config.py` (prefixed with `_`). Tool scripts import only `get_client`.
+
+#### Correct pattern for a new Telegram tool
+
+```python
+# tools/python/telegram_new_tool.py
+import sys
+from pathlib import Path
+
+_ROOT = Path(__file__).parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+from shared.telegram_config import get_client  # only this — no credentials
+
+
+async def _run(channel: str, ...) -> dict:
+    client, err = get_client(channel)   # ← single gate
+    if client is None:
+        return {"success": False, "error": err}
+
+    await client.connect()
+    if not await client.is_user_authorized():
+        await client.disconnect()
+        return {"success": False, "error": "Session expired"}
+    try:
+        ...  # Telethon calls
+    finally:
+        await client.disconnect()
+```
+
+The automated test `test_tool_uses_get_client_not_direct_env` will fail if a tool script violates either rule.
+
+---
+
 ## Schema Contract
 
 Every tool **should** provide input and output schemas under `schemas/`:

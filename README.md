@@ -34,6 +34,27 @@ Python MCP Server (FastMCP)
 
 Each tool script follows a simple contract: accept input as CLI args or stdin JSON, return a `{"success": true/false, ...}` JSON object on stdout. The MCP server validates every call against a security allowlist before execution — no arbitrary shell commands, no free-form code execution.
 
+## Telegram tool architecture
+
+Telegram tools enforce two rules that are verified by automated tests on every run:
+
+**1 — Single point of security check.**
+All Telegram tools must obtain their connection through `get_client(channel)` in `shared/telegram_config.py`. This is the only place that checks the enable/disable flag, the channel whitelist/blacklist, and the credentials. `server.py` contains no Telegram security logic — it only routes the call.
+
+```
+telegram_download.py
+  └── get_client(channel)          ← one gate, all checks here
+        ├── TELEGRAM_TOOLS_ENABLED?
+        ├── channel ACL (config/telegram_channels.json)?
+        ├── credentials present?
+        └── returns TelegramClient or (None, error)
+```
+
+**2 — Tool scripts must not read `.env`.**
+Credentials (`TELEGRAM_API_ID`, `TELEGRAM_API_HASH`) are private to `shared/telegram_config.py`. Tool scripts import only `get_client` — never credentials directly. An automated test fails the build if any tool script violates this.
+
+**Adding a new Telegram tool:** see `CLAUDE.md → Telegram Tools — Connection Gate` for the required code pattern.
+
 ## Roadmap
 
 This repo is actively updated with new tools for Claude as useful capabilities come up. The goal is to keep expanding what Claude can do in practice — file system operations, system automation, web interaction, and beyond.
