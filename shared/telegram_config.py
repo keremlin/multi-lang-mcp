@@ -6,7 +6,7 @@ They call get_client(channel) and receive either a ready TelegramClient
 or an error string. All security checks live here and nowhere else.
 
 Private (not for import by tools):
-  _API_ID, _API_HASH, _SESSION_PATH
+  _API_ID, _API_HASH, _SESSION_PATH, _TelegramClient, _ReadOnlyClient
 
 Public:
   get_client(channel, need_write) -> (TelegramClient | None, error_str)
@@ -29,6 +29,63 @@ _SESSION_PATH: str = str(
     Path(__file__).parent.parent / "tools" / "python" / "tele_session"
 )
 
+# ── Telethon client classes (lazy-imported once at module load) ───────────────
+
+try:
+    from telethon import TelegramClient as _TelegramClient
+
+    class _ReadOnlyClient(_TelegramClient):
+        """TelegramClient that raises PermissionError on any write-method access.
+
+        Returned by get_client() when TELEGRAM_WRITE_ENABLED is false or
+        need_write=False. Acts as a Telethon-level enforcement layer on top
+        of the need_write gate in get_client() — even if a tool forgets to
+        declare need_write=True, it cannot accidentally send messages.
+        """
+
+        _WRITE_METHODS: frozenset = frozenset({
+            # Messaging
+            "send_message",
+            "send_file",
+            "send_voice",
+            "send_video_note",
+            "send_reaction",
+            # Editing / deletion
+            "edit_message",
+            "delete_messages",
+            # Forwarding
+            "forward_messages",
+            # Pin / unpin
+            "pin_message",
+            "unpin_message",
+            # Admin / moderation
+            "kick_participant",
+            "edit_admin",
+            "edit_permissions",
+            "edit_ban",
+            # Channel / group management
+            "create_channel",
+            "delete_channel",
+        })
+
+        def __getattribute__(self, name: str):
+            blocked = object.__getattribute__(type(self), "_WRITE_METHODS")
+            if name in blocked:
+                raise PermissionError(
+                    f"Write operation '{name}' is blocked — "
+                    "set TELEGRAM_WRITE_ENABLED=true in .env to enable."
+                )
+            return super().__getattribute__(name)
+
+    _TELETHON_AVAILABLE = True
+
+except ImportError:
+    _TelegramClient = None  # type: ignore[assignment,misc]
+    _ReadOnlyClient = None  # type: ignore[assignment,misc]
+    _TELETHON_AVAILABLE = False
+
+
+# ── Public gate ───────────────────────────────────────────────────────────────
 
 def get_client(channel: str = "", need_write: bool = False):
     """Single gate for all Telegram tool access.
@@ -42,7 +99,11 @@ def get_client(channel: str = "", need_write: bool = False):
          Tools that only read must NOT pass need_write=True.
       5. telethon package installed
 
-    Returns (TelegramClient, "") on success.
+    Returns (client, "") on success:
+      - need_write=False or TELEGRAM_WRITE_ENABLED=false → _ReadOnlyClient
+        (write methods raise PermissionError at the Telethon level)
+      - need_write=True and TELEGRAM_WRITE_ENABLED=true  → TelegramClient
+
     The client is NOT yet connected — caller must: await client.connect(),
     verify is_user_authorized(), do work, then await client.disconnect().
 
@@ -66,19 +127,21 @@ def get_client(channel: str = "", need_write: bool = False):
         return None, "Missing credentials: add TELEGRAM_API_ID and TELEGRAM_API_HASH to .env"
 
     # 4. Write permission (only enforced when the tool explicitly requests write access)
-    if need_write and (
+    write_enabled = (
         os.environ.get("TELEGRAM_WRITE_ENABLED", "false").strip().lower()
-        not in ("true", "1", "yes")
-    ):
+        in ("true", "1", "yes")
+    )
+    if need_write and not write_enabled:
         return None, (
             "Telegram write operations are disabled "
             "(set TELEGRAM_WRITE_ENABLED=true in .env to enable)."
         )
 
     # 5. telethon
-    try:
-        from telethon import TelegramClient  # noqa: PLC0415
-    except ImportError:
+    if not _TELETHON_AVAILABLE:
         return None, "telethon not installed — run: pip install telethon"
 
-    return TelegramClient(_SESSION_PATH, _API_ID, _API_HASH), ""
+    # Return read-only client unless the tool explicitly requested write access
+    # AND the admin has enabled writes globally.
+    cls = _TelegramClient if (need_write and write_enabled) else _ReadOnlyClient
+    return cls(_SESSION_PATH, _API_ID, _API_HASH), ""

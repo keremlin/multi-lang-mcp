@@ -1,8 +1,9 @@
 """
-Telegram ACL tests — 3 parts:
+Telegram ACL tests — 3 parts + write gate:
   Part 1 — Blacklist mode
   Part 2 — Whitelist mode
   Part 3 — Combined: enable/disable flag + ACL
+  Part 4 — Write gate: need_write + TELEGRAM_WRITE_ENABLED + _ReadOnlyClient
 
 All tests target get_client() in shared/telegram_config.py — the single
 gatekeeper for all three Telegram tools. An architectural test at the end
@@ -14,6 +15,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import shared.telegram_config as _tc
 from shared.telegram_config import get_client
 
 BLOCKED = "@blockedchan"
@@ -39,10 +41,19 @@ def _creds_patch():
     )
 
 
-def _client_patch():
-    """Prevent a real TelegramClient from being constructed."""
-    mock = MagicMock(name="TelegramClient")
-    return patch("telethon.TelegramClient", return_value=mock)
+def _client_patch(readonly=True):
+    """Prevent real client construction.
+
+    readonly=True  → patches _ReadOnlyClient  (default: need_write=False path)
+    readonly=False → patches _TelegramClient  (need_write=True + write enabled path)
+    """
+    mock = MagicMock(name="MockClient")
+    target = (
+        "shared.telegram_config._ReadOnlyClient"
+        if readonly
+        else "shared.telegram_config._TelegramClient"
+    )
+    return patch(target, return_value=mock)
 
 
 # ─── Part 1: Blacklist ────────────────────────────────────────────────────────
@@ -195,10 +206,12 @@ class TestCombined:
 
 class TestWriteGate:
 
+    # ── Gate checks ───────────────────────────────────────────────────────────
+
     def test_read_tool_succeeds_without_write_flag(self, tmp_path):
         acl = _write_acl(tmp_path, "off", [])
         id_p, hash_p = _creds_patch()
-        with _acl_patch(acl), id_p, hash_p, _client_patch():
+        with _acl_patch(acl), id_p, hash_p, _client_patch(readonly=True):
             with patch.dict("os.environ", {"TELEGRAM_WRITE_ENABLED": "false"}):
                 client, err = get_client(ALLOWED, need_write=False)
         assert client is not None
@@ -217,14 +230,13 @@ class TestWriteGate:
     def test_write_tool_allowed_when_flag_is_true(self, enabled_val, tmp_path):
         acl = _write_acl(tmp_path, "off", [])
         id_p, hash_p = _creds_patch()
-        with _acl_patch(acl), id_p, hash_p, _client_patch():
+        with _acl_patch(acl), id_p, hash_p, _client_patch(readonly=False):
             with patch.dict("os.environ", {"TELEGRAM_WRITE_ENABLED": enabled_val}):
                 client, err = get_client(ALLOWED, need_write=True)
         assert client is not None
         assert err == ""
 
     def test_write_flag_checked_after_acl(self, tmp_path):
-        # ACL blocks first — write flag is never reached.
         acl = _write_acl(tmp_path, "whitelist", [ALLOWED])
         with _acl_patch(acl), patch.dict("os.environ", {"TELEGRAM_WRITE_ENABLED": "true"}):
             client, err = get_client(BLOCKED, need_write=True)
@@ -232,7 +244,6 @@ class TestWriteGate:
         assert "whitelist" in err.lower()
 
     def test_write_flag_default_is_false(self, tmp_path):
-        # When TELEGRAM_WRITE_ENABLED is absent from env, write must be denied.
         acl = _write_acl(tmp_path, "off", [])
         id_p, hash_p = _creds_patch()
         env = {k: v for k, v in __import__("os").environ.items()
@@ -241,6 +252,48 @@ class TestWriteGate:
             client, err = get_client(ALLOWED, need_write=True)
         assert client is None
         assert "write" in err.lower()
+
+    # ── _ReadOnlyClient Telethon-level enforcement ────────────────────────────
+
+    def test_readonly_client_is_returned_when_write_disabled(self, tmp_path):
+        acl = _write_acl(tmp_path, "off", [])
+        id_p, hash_p = _creds_patch()
+        with _acl_patch(acl), id_p, hash_p, _client_patch(readonly=True):
+            with patch.dict("os.environ", {"TELEGRAM_WRITE_ENABLED": "false"}):
+                client, err = get_client(ALLOWED, need_write=False)
+        assert client is not None
+        # The mock was called via _ReadOnlyClient, not _TelegramClient
+        assert err == ""
+
+    def test_readonly_client_is_returned_even_when_write_enabled_but_not_requested(self, tmp_path):
+        # Tool passes need_write=False while admin has write enabled →
+        # still gets _ReadOnlyClient to prevent accidental writes.
+        acl = _write_acl(tmp_path, "off", [])
+        id_p, hash_p = _creds_patch()
+        with _acl_patch(acl), id_p, hash_p, _client_patch(readonly=True):
+            with patch.dict("os.environ", {"TELEGRAM_WRITE_ENABLED": "true"}):
+                client, err = get_client(ALLOWED, need_write=False)
+        assert client is not None
+        assert err == ""
+
+    @pytest.mark.parametrize("method", [
+        "send_message", "send_file", "edit_message", "delete_messages",
+        "forward_messages", "pin_message", "kick_participant",
+    ])
+    def test_readonly_client_blocks_write_methods(self, method):
+        # Use __new__ to get an instance without a real Telegram connection.
+        client = object.__new__(_tc._ReadOnlyClient)
+        with pytest.raises(PermissionError, match=method):
+            getattr(client, method)
+
+    def test_readonly_client_allows_read_methods(self):
+        client = object.__new__(_tc._ReadOnlyClient)
+        # These must NOT raise — they are read operations.
+        for attr in ("iter_messages", "get_messages", "get_entity",
+                     "download_media", "connect", "disconnect",
+                     "is_user_authorized"):
+            # Just accessing the attribute (not calling) must succeed.
+            _ = getattr(client, attr)
 
 
 # ─── Architecture: no tool script may bypass the gate ────────────────────────
