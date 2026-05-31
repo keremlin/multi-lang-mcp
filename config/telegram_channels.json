@@ -1,0 +1,5 @@
+{
+  "_comment": "mode: 'off' = no filter | 'whitelist' = only listed channels allowed | 'blacklist' = listed channels blocked",
+  "mode": "whitelist",
+  "channels": ["@khodegandi"]
+}

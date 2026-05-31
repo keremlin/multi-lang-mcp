@@ -17,15 +17,12 @@ Output:
 import sys
 import json
 import asyncio
-import os
 from pathlib import Path
-from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).parent.parent.parent / ".env")
-
-API_ID: int = int(os.environ.get("TELEGRAM_API_ID", "0") or "0")
-API_HASH: str = os.environ.get("TELEGRAM_API_HASH", "")
-SESSION_PATH = str(Path(__file__).parent / "tele_session")
+_ROOT = Path(__file__).parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+from shared.telegram_config import get_client
 
 
 def _safe_filename(name: str, fallback: str) -> str:
@@ -34,19 +31,18 @@ def _safe_filename(name: str, fallback: str) -> str:
 
 
 async def _download(channel: str, message_ids: list[int], output_dir: Path) -> dict:
-    try:
-        from telethon import TelegramClient
-        from telethon.tl.types import (
-            MessageMediaDocument,
-            DocumentAttributeAudio,
-            DocumentAttributeFilename,
-        )
-    except ImportError:
-        return {"success": False, "error": "telethon not installed — run: pip install telethon"}
+    from telethon.tl.types import (
+        MessageMediaDocument,
+        DocumentAttributeAudio,
+        DocumentAttributeFilename,
+    )
+
+    client, err = get_client(channel)
+    if client is None:
+        return {"success": False, "error": err}
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
     await client.connect()
     if not await client.is_user_authorized():
         await client.disconnect()
@@ -162,10 +158,6 @@ def main():
     message_ids = params.get("message_ids", [])
     if not message_ids or not isinstance(message_ids, list):
         print(json.dumps({"success": False, "error": "message_ids must be a non-empty list of integers"}))
-        sys.exit(1)
-
-    if not API_ID or not API_HASH:
-        print(json.dumps({"success": False, "error": "Missing TELEGRAM_API_ID or TELEGRAM_API_HASH in .env"}))
         sys.exit(1)
 
     raw_dir = params.get("output_dir", "").strip()

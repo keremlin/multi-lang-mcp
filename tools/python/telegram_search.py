@@ -18,35 +18,31 @@ Output:
 import sys
 import json
 import asyncio
-import os
 from pathlib import Path
-from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).parent.parent.parent / ".env")
-
-API_ID: int = int(os.environ.get("TELEGRAM_API_ID", "0") or "0")
-API_HASH: str = os.environ.get("TELEGRAM_API_HASH", "")
-SESSION_PATH = str(Path(__file__).parent / "tele_session")
+_ROOT = Path(__file__).parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+from shared.telegram_config import get_client
 
 DEFAULT_LIMIT = 50
 
 
 async def _search(channel: str, query: str, media_type: str, limit: int) -> dict:
-    try:
-        from telethon import TelegramClient
-        from telethon.tl.types import (
-            MessageMediaDocument,
-            DocumentAttributeAudio,
-            DocumentAttributeFilename,
-            DocumentAttributeVideo,
-            InputMessagesFilterVideo,
-            InputMessagesFilterMusic,
-            InputMessagesFilterDocument,
-        )
-    except ImportError:
-        return {"success": False, "error": "telethon not installed — run: pip install telethon"}
+    from telethon.tl.types import (
+        MessageMediaDocument,
+        DocumentAttributeAudio,
+        DocumentAttributeFilename,
+        DocumentAttributeVideo,
+        InputMessagesFilterVideo,
+        InputMessagesFilterMusic,
+        InputMessagesFilterDocument,
+    )
 
-    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
+    client, err = get_client(channel)
+    if client is None:
+        return {"success": False, "error": err}
+
     await client.connect()
     if not await client.is_user_authorized():
         await client.disconnect()
@@ -191,10 +187,6 @@ def main():
         params = json.loads(raw) if raw else {}
     except json.JSONDecodeError as e:
         print(json.dumps({"success": False, "error": f"Invalid JSON input: {e}"}))
-        sys.exit(1)
-
-    if not API_ID or not API_HASH:
-        print(json.dumps({"success": False, "error": "Missing TELEGRAM_API_ID or TELEGRAM_API_HASH in .env"}))
         sys.exit(1)
 
     query = params.get("query", "").strip()
