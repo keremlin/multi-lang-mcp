@@ -9,7 +9,7 @@ Private (not for import by tools):
   _API_ID, _API_HASH, _SESSION_PATH
 
 Public:
-  get_client(channel) -> (TelegramClient | None, error_str)
+  get_client(channel, need_write) -> (TelegramClient | None, error_str)
 """
 import os
 import logging
@@ -30,14 +30,17 @@ _SESSION_PATH: str = str(
 )
 
 
-def get_client(channel: str = ""):
+def get_client(channel: str = "", need_write: bool = False):
     """Single gate for all Telegram tool access.
 
     Checks in order:
       1. TELEGRAM_TOOLS_ENABLED env var  (read at call time — no restart needed)
       2. Channel ACL from config/telegram_channels.json  (re-read from disk each call)
       3. Credentials present (API_ID, API_HASH)
-      4. telethon package installed
+      4. Write permission — only when need_write=True:
+         TELEGRAM_WRITE_ENABLED must be "true" / "1" / "yes", default is "false".
+         Tools that only read must NOT pass need_write=True.
+      5. telethon package installed
 
     Returns (TelegramClient, "") on success.
     The client is NOT yet connected — caller must: await client.connect(),
@@ -62,7 +65,17 @@ def get_client(channel: str = ""):
     if not _API_ID or not _API_HASH:
         return None, "Missing credentials: add TELEGRAM_API_ID and TELEGRAM_API_HASH to .env"
 
-    # 4. telethon
+    # 4. Write permission (only enforced when the tool explicitly requests write access)
+    if need_write and (
+        os.environ.get("TELEGRAM_WRITE_ENABLED", "false").strip().lower()
+        not in ("true", "1", "yes")
+    ):
+        return None, (
+            "Telegram write operations are disabled "
+            "(set TELEGRAM_WRITE_ENABLED=true in .env to enable)."
+        )
+
+    # 5. telethon
     try:
         from telethon import TelegramClient  # noqa: PLC0415
     except ImportError:

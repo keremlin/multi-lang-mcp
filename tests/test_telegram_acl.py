@@ -191,6 +191,58 @@ class TestCombined:
         assert "disabled" in err.lower()
 
 
+# ─── Part 4: Write gate ───────────────────────────────────────────────────────
+
+class TestWriteGate:
+
+    def test_read_tool_succeeds_without_write_flag(self, tmp_path):
+        acl = _write_acl(tmp_path, "off", [])
+        id_p, hash_p = _creds_patch()
+        with _acl_patch(acl), id_p, hash_p, _client_patch():
+            with patch.dict("os.environ", {"TELEGRAM_WRITE_ENABLED": "false"}):
+                client, err = get_client(ALLOWED, need_write=False)
+        assert client is not None
+        assert err == ""
+
+    def test_write_tool_blocked_when_flag_is_false(self, tmp_path):
+        acl = _write_acl(tmp_path, "off", [])
+        id_p, hash_p = _creds_patch()
+        with _acl_patch(acl), id_p, hash_p:
+            with patch.dict("os.environ", {"TELEGRAM_WRITE_ENABLED": "false"}):
+                client, err = get_client(ALLOWED, need_write=True)
+        assert client is None
+        assert "write" in err.lower()
+
+    @pytest.mark.parametrize("enabled_val", ["true", "1", "yes"])
+    def test_write_tool_allowed_when_flag_is_true(self, enabled_val, tmp_path):
+        acl = _write_acl(tmp_path, "off", [])
+        id_p, hash_p = _creds_patch()
+        with _acl_patch(acl), id_p, hash_p, _client_patch():
+            with patch.dict("os.environ", {"TELEGRAM_WRITE_ENABLED": enabled_val}):
+                client, err = get_client(ALLOWED, need_write=True)
+        assert client is not None
+        assert err == ""
+
+    def test_write_flag_checked_after_acl(self, tmp_path):
+        # ACL blocks first — write flag is never reached.
+        acl = _write_acl(tmp_path, "whitelist", [ALLOWED])
+        with _acl_patch(acl), patch.dict("os.environ", {"TELEGRAM_WRITE_ENABLED": "true"}):
+            client, err = get_client(BLOCKED, need_write=True)
+        assert client is None
+        assert "whitelist" in err.lower()
+
+    def test_write_flag_default_is_false(self, tmp_path):
+        # When TELEGRAM_WRITE_ENABLED is absent from env, write must be denied.
+        acl = _write_acl(tmp_path, "off", [])
+        id_p, hash_p = _creds_patch()
+        env = {k: v for k, v in __import__("os").environ.items()
+               if k != "TELEGRAM_WRITE_ENABLED"}
+        with _acl_patch(acl), id_p, hash_p, patch.dict("os.environ", env, clear=True):
+            client, err = get_client(ALLOWED, need_write=True)
+        assert client is None
+        assert "write" in err.lower()
+
+
 # ─── Architecture: no tool script may bypass the gate ────────────────────────
 
 TOOL_SCRIPTS = [
