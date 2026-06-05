@@ -356,6 +356,24 @@ def telegram_leave_channel(channel: str) -> dict:
     return run_python("tools/python/telegram_leave_channel.py", stdin_data=stdin, timeout=60)
 
 
+@mcp.tool()
+def telegram_delete_messages(chat: str, message_ids: list) -> dict:
+    """Delete specific messages from a Telegram chat.
+
+    You must be the sender of the messages or an admin of the chat.
+
+    Args:
+        chat: Chat @username or numeric ID where the messages live.
+        message_ids: List of message IDs to delete (integers).
+
+    Requires TELEGRAM_WRITE_ENABLED=true.
+    Requires a valid Telethon session at tools/python/tele_session.session.
+    """
+    import json as _json
+    stdin = _json.dumps({"chat": chat, "message_ids": message_ids})
+    return run_python("tools/python/telegram_delete_messages.py", stdin_data=stdin, timeout=30)
+
+
 
 @mcp.tool()
 def chroma_list_collections() -> dict:

@@ -141,6 +141,13 @@
       "timeout": 60
     },
     {
+      "name": "telegram_delete_messages",
+      "runtime": "python",
+      "script": "tools/python/telegram_delete_messages.py",
+      "description": "Delete specific messages from a Telegram chat (must be sender or admin). Requires TELEGRAM_WRITE_ENABLED=true.",
+      "timeout": 30
+    },
+    {
       "name": "chroma_list_collections",
       "runtime": "python",
       "script": "tools/python/chroma_list_collections.py",

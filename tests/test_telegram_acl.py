@@ -306,6 +306,7 @@ TOOL_SCRIPTS = [
     Path("tools/python/telegram_join_channel.py"),
     Path("tools/python/telegram_forward_message.py"),
     Path("tools/python/telegram_leave_channel.py"),
+    Path("tools/python/telegram_delete_messages.py"),
 ]
 
 FORBIDDEN = ["API_ID", "API_HASH", "SESSION_PATH", "load_dotenv", "TELEGRAM_API_ID", "TELEGRAM_API_HASH"]
