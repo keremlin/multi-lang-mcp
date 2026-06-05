@@ -1,7 +1,18 @@
+import os
 import sys
 import json
 import time
 from pathlib import Path
+
+_ROOT = Path(__file__).parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+try:
+    from shared import download_progress as _dp
+    _DP_OK = True
+except Exception:
+    _DP_OK = False
 
 DOWNLOADS_DIR = Path.home() / "Downloads"
 
@@ -41,6 +52,13 @@ def main():
 
     DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
+    dl_id = _dp.new_download("youtube", url) if _DP_OK else None
+    if dl_id and _DP_OK:
+        try:
+            _dp.update(dl_id, pid=os.getpid())
+        except Exception:
+            pass
+
     download_state = {"filepath": None}
     progress_log = []   # [{pct, speed_mbps, elapsed}]
     speed_samples = []
@@ -63,6 +81,21 @@ def main():
 
             if total:
                 pct = round(downloaded / total * 100, 1)
+                eta_s = d.get("eta") or 0
+
+                if dl_id and _DP_OK:
+                    try:
+                        _dp.update(
+                            dl_id,
+                            status="downloading",
+                            pct=pct,
+                            speed_mbps=speed_mbps,
+                            eta_s=eta_s,
+                            downloaded_mb=round(downloaded / (1024 * 1024), 1),
+                            total_mb=round(total / (1024 * 1024), 1),
+                        )
+                    except Exception:
+                        pass
 
                 # tqdm bar on stderr
                 if _tqdm_available:
@@ -141,7 +174,7 @@ def main():
         avg_speed = round(sum(speed_samples) / len(speed_samples), 2) if speed_samples else 0
         peak_speed = round(max(speed_samples), 2) if speed_samples else 0
 
-        print(json.dumps({
+        result = {
             "success": True,
             "data": {
                 "title": info.get("title", ""),
@@ -160,12 +193,33 @@ def main():
                     "progress_log": progress_log,
                 },
             },
-        }))
+        }
+        if dl_id and _DP_OK:
+            try:
+                _dp.complete(
+                    dl_id,
+                    name=info.get("title", url),
+                    saved_to=str(filepath.resolve()),
+                    size_mb=round(file_size / (1024 * 1024), 2),
+                )
+            except Exception:
+                pass
+        print(json.dumps(result))
 
     except yt_dlp.utils.DownloadError as exc:
+        if dl_id and _DP_OK:
+            try:
+                _dp.fail(dl_id, str(exc))
+            except Exception:
+                pass
         print(json.dumps({"success": False, "error": str(exc)}))
         sys.exit(1)
     except Exception as exc:
+        if dl_id and _DP_OK:
+            try:
+                _dp.fail(dl_id, str(exc))
+            except Exception:
+                pass
         print(json.dumps({"success": False, "error": str(exc)}))
         sys.exit(1)
 
