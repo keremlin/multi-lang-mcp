@@ -34,6 +34,8 @@ def execute(
             **stdin_kwargs,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
             cwd=_PROJECT_ROOT,
         )
