@@ -299,6 +299,27 @@ def telegram_bot_interact(
     })
     return run_python("tools/python/telegram_bot_interact.py", stdin_data=stdin, timeout=120)
 
+@mcp.tool()
+def telegram_join_channel(invite_link: str) -> dict:
+    """Join a Telegram channel or group via @username or a private invite link.
+
+    Accepts:
+      @username               — public channel / group
+      https://t.me/+HASH      — private invite link
+      https://t.me/joinchat/HASH — private invite link (legacy format)
+
+    Requires TELEGRAM_WRITE_ENABLED=true in .env.
+
+    Args:
+        invite_link: Channel @username or full t.me invite URL.
+
+    Requires a valid Telethon session at tools/python/tele_session.session.
+    """
+    import json as _json
+    stdin = _json.dumps({"invite_link": invite_link})
+    return run_python("tools/python/telegram_join_channel.py", stdin_data=stdin, timeout=60)
+
+
 
 @mcp.tool()
 def chroma_list_collections() -> dict:

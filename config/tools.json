@@ -120,6 +120,13 @@
       "timeout": 120
     },
     {
+      "name": "telegram_join_channel",
+      "runtime": "python",
+      "script": "tools/python/telegram_join_channel.py",
+      "description": "Join a Telegram channel or group via @username or private invite link (t.me/+HASH). Requires TELEGRAM_WRITE_ENABLED=true.",
+      "timeout": 60
+    },
+    {
       "name": "chroma_list_collections",
       "runtime": "python",
       "script": "tools/python/chroma_list_collections.py",
