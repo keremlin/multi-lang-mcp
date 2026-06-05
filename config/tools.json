@@ -127,6 +127,13 @@
       "timeout": 60
     },
     {
+      "name": "telegram_forward_message",
+      "runtime": "python",
+      "script": "tools/python/telegram_forward_message.py",
+      "description": "Forward specific messages from one Telegram chat to another. Requires TELEGRAM_WRITE_ENABLED=true.",
+      "timeout": 60
+    },
+    {
       "name": "chroma_list_collections",
       "runtime": "python",
       "script": "tools/python/chroma_list_collections.py",

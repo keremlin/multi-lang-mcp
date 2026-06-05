@@ -320,6 +320,25 @@ def telegram_join_channel(invite_link: str) -> dict:
     return run_python("tools/python/telegram_join_channel.py", stdin_data=stdin, timeout=60)
 
 
+@mcp.tool()
+def telegram_forward_message(from_chat: str, message_ids: list, to_chat: str) -> dict:
+    """Forward specific messages from one Telegram chat to another.
+
+    Use this to preserve bot files before the bot auto-deletes them.
+
+    Args:
+        from_chat: Source chat @username, numeric ID, or bot @username.
+        message_ids: List of message IDs to forward (integers).
+        to_chat: Destination chat @username or numeric ID.
+
+    Requires TELEGRAM_WRITE_ENABLED=true.
+    Requires a valid Telethon session at tools/python/tele_session.session.
+    """
+    import json as _json
+    stdin = _json.dumps({"from_chat": from_chat, "message_ids": message_ids, "to_chat": to_chat})
+    return run_python("tools/python/telegram_forward_message.py", stdin_data=stdin, timeout=60)
+
+
 
 @mcp.tool()
 def chroma_list_collections() -> dict:
