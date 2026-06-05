@@ -147,6 +147,51 @@ async def _search(channel: str, query: str, media_type: str, limit: int) -> dict
                 else:
                     # Text/announcement post mentioning the content
                     snippet = (message.message or "").strip()[:200]
+
+                    # Extract all links: inline keyboard buttons + text entity URLs
+                    inline_buttons = []
+                    markup = getattr(message, "reply_markup", None)
+                    if markup:
+                        from telethon.tl.types import (
+                            ReplyInlineMarkup,
+                            KeyboardButtonUrl,
+                            KeyboardButtonCallback,
+                        )
+                        if isinstance(markup, ReplyInlineMarkup):
+                            for row in markup.rows:
+                                for btn in row.buttons:
+                                    if isinstance(btn, KeyboardButtonUrl):
+                                        inline_buttons.append({
+                                            "text": btn.text,
+                                            "url": btn.url,
+                                            "type": "url",
+                                        })
+                                    elif isinstance(btn, KeyboardButtonCallback):
+                                        inline_buttons.append({
+                                            "text": btn.text,
+                                            "data": btn.data.decode("utf-8", errors="replace") if btn.data else "",
+                                            "type": "callback",
+                                        })
+
+                    # Also extract text entity URLs (hyperlinks embedded in message text)
+                    raw_text = message.message or ""
+                    for ent in (message.entities or []):
+                        from telethon.tl.types import MessageEntityTextUrl, MessageEntityUrl
+                        if isinstance(ent, MessageEntityTextUrl):
+                            label = raw_text[ent.offset: ent.offset + ent.length]
+                            inline_buttons.append({
+                                "text": label,
+                                "url": ent.url,
+                                "type": "text_url",
+                            })
+                        elif isinstance(ent, MessageEntityUrl):
+                            url_text = raw_text[ent.offset: ent.offset + ent.length]
+                            inline_buttons.append({
+                                "text": url_text,
+                                "url": url_text,
+                                "type": "plain_url",
+                            })
+
                     announcements.append({
                         "message_id": message.id,
                         "result_type": "announcement",
@@ -155,6 +200,7 @@ async def _search(channel: str, query: str, media_type: str, limit: int) -> dict
                         "chat_id": message.chat_id,
                         "text_snippet": snippet,
                         "date": message.date.isoformat() if message.date else None,
+                        "inline_buttons": inline_buttons,
                     })
                     print(
                         f"[telegram_search] Announcement: msg_id={message.id} | chat={chat_name!r}",
