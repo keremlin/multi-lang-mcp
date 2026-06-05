@@ -134,6 +134,13 @@
       "timeout": 60
     },
     {
+      "name": "telegram_leave_channel",
+      "runtime": "python",
+      "script": "tools/python/telegram_leave_channel.py",
+      "description": "Leave / unsubscribe from a Telegram channel or group. Requires TELEGRAM_WRITE_ENABLED=true.",
+      "timeout": 60
+    },
+    {
       "name": "chroma_list_collections",
       "runtime": "python",
       "script": "tools/python/chroma_list_collections.py",

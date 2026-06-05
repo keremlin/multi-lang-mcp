@@ -339,6 +339,23 @@ def telegram_forward_message(from_chat: str, message_ids: list, to_chat: str) ->
     return run_python("tools/python/telegram_forward_message.py", stdin_data=stdin, timeout=60)
 
 
+@mcp.tool()
+def telegram_leave_channel(channel: str) -> dict:
+    """Leave / unsubscribe from a Telegram channel or group.
+
+    Accepts @username, t.me/username, or t.me/+HASH private invite links.
+
+    Args:
+        channel: Channel @username, full t.me URL, or private invite link to leave.
+
+    Requires TELEGRAM_WRITE_ENABLED=true.
+    Requires a valid Telethon session at tools/python/tele_session.session.
+    """
+    import json as _json
+    stdin = _json.dumps({"channel": channel})
+    return run_python("tools/python/telegram_leave_channel.py", stdin_data=stdin, timeout=60)
+
+
 
 @mcp.tool()
 def chroma_list_collections() -> dict:
