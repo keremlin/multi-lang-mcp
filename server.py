@@ -520,6 +520,38 @@ def bluetooth_disconnect(name: str) -> dict:
 
 
 @mcp.tool()
+def video_converter_lg(
+    input_path: str,
+    output_path: str = "",
+    crf: int = 23,
+    preset: str = "medium",
+) -> dict:
+    """Convert a video file to LG TV-compatible format (H.264 MP4, AAC audio, max 1920×1080 @ 30 fps).
+
+    Optimised for LG 43LH5410 and similar 2015 LG Full HD TVs.
+    Scales down to 1920×1080 if the source is larger; preserves original resolution otherwise.
+    Frame rate is capped at 30 fps only when the source exceeds it.
+
+    Args:
+        input_path: Absolute path to the source video file (MKV, AVI, MOV, WEBM, etc.).
+        output_path: Destination MP4 path. Defaults to <input_stem>_lg.mp4 in the same folder.
+        crf: H.264 quality — 0=lossless, 51=worst, 23=default. Lower means better quality and larger file.
+        preset: x264 speed/compression preset: ultrafast, superfast, veryfast, faster, fast,
+                medium (default), slow, slower, veryslow. Slower = smaller file.
+
+    Requires: ffmpeg-python (pip install ffmpeg-python) and ffmpeg binary in PATH.
+    """
+    import json as _json
+    stdin = _json.dumps({
+        "input_path": input_path,
+        "output_path": output_path,
+        "crf": crf,
+        "preset": preset,
+    })
+    return run_python("tools/python/video_converter_lg.py", stdin_data=stdin, timeout=3600)
+
+
+@mcp.tool()
 def google_refresh_token() -> dict:
     """Refresh the Google OAuth2 access token using the stored refresh token.
 

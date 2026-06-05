@@ -202,6 +202,13 @@
       "script": "tools/powershell/bluetooth_disconnect.ps1",
       "description": "Disconnect a Bluetooth device by name (requires admin for PnP disable)",
       "timeout": 15
+    },
+    {
+      "name": "video_converter_lg",
+      "runtime": "python",
+      "script": "tools/python/video_converter_lg.py",
+      "description": "Convert a video to LG TV-compatible MP4 (H.264, AAC, max 1920×1080 @ 30 fps)",
+      "timeout": 3600
     }
   ]
 }
