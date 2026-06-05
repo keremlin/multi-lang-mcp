@@ -113,6 +113,13 @@
       "timeout": 300
     },
     {
+      "name": "telegram_bot_interact",
+      "runtime": "python",
+      "script": "tools/python/telegram_bot_interact.py",
+      "description": "Send a text message or click an inline button on a Telegram bot and return its response. Bot-only — rejects channels and groups.",
+      "timeout": 120
+    },
+    {
       "name": "chroma_list_collections",
       "runtime": "python",
       "script": "tools/python/chroma_list_collections.py",

@@ -266,6 +266,40 @@ def telegram_search(
     return run_python("tools/python/telegram_search.py", stdin_data=stdin, timeout=300)
 
 
+def telegram_bot_interact(
+    bot_username: str,
+    text: str = "",
+    click_button_index: int = -1,
+    output_dir: str = "",
+    wait_seconds: int = 8,
+) -> dict:
+    """Send a text message or click an inline button on a Telegram bot, then return its response.
+
+    Bot-only — rejects channels and groups at the Telethon entity level.
+    Any file the bot sends is downloaded automatically to output_dir.
+    Requires TELEGRAM_WRITE_ENABLED=true in .env.
+
+    Args:
+        bot_username: Bot @username (e.g. '@FlintFilesBot').
+        text: Message text to send (e.g. '/start TOKEN'). Use this OR click_button_index.
+        click_button_index: Flat index (0-based, row-major) of the inline button to click
+                            in the bot's most recent reply. Use -1 (default) to send text instead.
+        output_dir: Directory to save any files the bot replies with. Defaults to ~/Downloads/telegram.
+        wait_seconds: Seconds to wait for the bot to reply after sending (default 8).
+
+    Requires a valid Telethon session at tools/python/tele_session.session.
+    """
+    import json as _json
+    stdin = _json.dumps({
+        "bot_username": bot_username,
+        "text": text,
+        "click_button_index": click_button_index,
+        "output_dir": output_dir,
+        "wait_seconds": wait_seconds,
+    })
+    return run_python("tools/python/telegram_bot_interact.py", stdin_data=stdin, timeout=120)
+
+
 @mcp.tool()
 def chroma_list_collections() -> dict:
     """List all collections in the ChromaDB instance.
