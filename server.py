@@ -232,7 +232,7 @@ def telegram_download_by_ids(
         "message_ids": message_ids,
         "output_dir": output_dir,
     })
-    return run_python("tools/python/telegram_download_by_ids.py", stdin_data=stdin, timeout=600)
+    return run_python("tools/python/telegram_download_by_ids.py", stdin_data=stdin, timeout=7200)
 
 
 @mcp.tool()

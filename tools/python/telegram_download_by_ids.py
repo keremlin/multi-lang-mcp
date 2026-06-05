@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Download specific audio messages from a Telegram channel by message ID.
+Download specific messages (audio, video, documents) from a Telegram channel by message ID.
 Uses Telethon's get_messages(ids=[...]) — fetches only the listed messages,
 no history scan needed.
 
@@ -34,6 +34,7 @@ async def _download(channel: str, message_ids: list[int], output_dir: Path) -> d
     from telethon.tl.types import (
         MessageMediaDocument,
         DocumentAttributeAudio,
+        DocumentAttributeVideo,
         DocumentAttributeFilename,
     )
 
@@ -64,35 +65,39 @@ async def _download(channel: str, message_ids: list[int], output_dir: Path) -> d
             if msg is None:
                 continue
             if not msg.media or not isinstance(msg.media, MessageMediaDocument):
-                print(f"[telegram_download_by_ids] msg {msg.id}: no audio, skipping", file=sys.stderr)
+                print(f"[telegram_download_by_ids] msg {msg.id}: no document media, skipping", file=sys.stderr)
                 skipped += 1
                 continue
 
             doc = msg.media.document
             mime = getattr(doc, "mime_type", "") or ""
-            if not mime.startswith("audio/"):
-                skipped += 1
-                continue
+            ext = mime.split("/")[-1] if "/" in mime else "bin"
+            if mime == "audio/mpeg":
+                ext = "mp3"
+            elif mime == "video/mp4":
+                ext = "mp4"
 
-            ext = "mp3" if mime == "audio/mpeg" else mime.split("/")[-1]
+            # Try to get filename from attributes
             filename = None
-
             for attr in doc.attributes:
                 if isinstance(attr, DocumentAttributeFilename):
                     filename = attr.file_name
                     break
 
             if not filename:
-                title = performer = ""
-                for attr in doc.attributes:
-                    if isinstance(attr, DocumentAttributeAudio):
-                        title = getattr(attr, "title", "") or ""
-                        performer = getattr(attr, "performer", "") or ""
-                        break
-                if title and performer:
-                    filename = f"{performer} - {title}.{ext}"
-                elif title:
-                    filename = f"{title}.{ext}"
+                if mime.startswith("audio/"):
+                    title = performer = ""
+                    for attr in doc.attributes:
+                        if isinstance(attr, DocumentAttributeAudio):
+                            title = getattr(attr, "title", "") or ""
+                            performer = getattr(attr, "performer", "") or ""
+                            break
+                    if title and performer:
+                        filename = f"{performer} - {title}.{ext}"
+                    elif title:
+                        filename = f"{title}.{ext}"
+                    else:
+                        filename = f"msg_{msg.id}.{ext}"
                 else:
                     filename = f"msg_{msg.id}.{ext}"
 
