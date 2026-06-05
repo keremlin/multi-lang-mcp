@@ -62,7 +62,7 @@ def web_search(query: str, max_results: int = 5) -> dict:
 
 
 @mcp.tool()
-def youtube_download(url: str, retries: int = 3, timeout: int = 30, video_format: str = "bestvideo+bestaudio/best", audio_format: str = "") -> dict:
+def youtube_download(url: str, retries: int = 3, timeout: int = 30, video_format: str = "bestvideo+bestaudio/best", audio_format: str = "", merge_format: str = "") -> dict:
     """Download a YouTube video (or audio-only) to the user's Downloads folder.
 
     Args:
@@ -71,10 +71,11 @@ def youtube_download(url: str, retries: int = 3, timeout: int = 30, video_format
         timeout: Socket timeout in seconds for each network operation (default 30).
         video_format: yt-dlp format string, e.g. 'best[ext=mp4]' or 'bestvideo+bestaudio/best' (default).
         audio_format: When set, downloads audio only and converts to this format (e.g. 'mp3', 'm4a', 'opus'). Requires ffmpeg.
+        merge_format: Output container format for remuxing, e.g. 'mkv', 'avi', 'mp4'. Requires ffmpeg. Overrides the container of the merged output.
     """
     return run_python(
         "tools/python/youtube_download.py",
-        [url, str(retries), str(timeout), video_format, audio_format],
+        [url, str(retries), str(timeout), video_format, audio_format, merge_format],
         timeout=600,
     )
 

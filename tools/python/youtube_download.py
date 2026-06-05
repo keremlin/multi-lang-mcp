@@ -25,6 +25,7 @@ def main():
 
     video_format = sys.argv[4] if len(sys.argv) > 4 else "bestvideo+bestaudio/best"
     audio_format = sys.argv[5] if len(sys.argv) > 5 else ""
+    merge_format = sys.argv[6] if len(sys.argv) > 6 else ""
 
     try:
         import yt_dlp
@@ -120,6 +121,8 @@ def main():
             "preferredcodec": audio_format,
             "preferredquality": "192",
         }]
+    elif merge_format:
+        ydl_opts["merge_output_format"] = merge_format
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
