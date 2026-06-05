@@ -4,6 +4,7 @@ Download audio files from a Telegram channel using Telethon (MTProto).
 Input: JSON on stdin  { "channel": "@name_or_id", "output_dir": "...", "limit": 50, "min_id": 0 }
 Output: JSON on stdout
 """
+import os
 import sys
 import json
 import asyncio
@@ -14,6 +15,12 @@ _ROOT = Path(__file__).parent.parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 from shared.telegram_config import get_client
+
+try:
+    from shared import download_progress as _dp
+    _DP_OK = True
+except Exception:
+    _DP_OK = False
 
 # ── Config ─────────────────────────────────────────────────────────────────
 RATE_LIMIT_PER_SEC = 10
@@ -68,7 +75,7 @@ def _safe_filename(name: str, fallback: str) -> str:
     return safe if safe else fallback
 
 
-async def _download(channel: str, output_dir: Path, limit: int, min_id: int, max_id: int = 0) -> dict:
+async def _download(channel: str, output_dir: Path, limit: int, min_id: int, max_id: int = 0, dl_id: str = "") -> dict:
     from telethon.tl.types import (
         MessageMediaDocument,
         DocumentAttributeAudio,
@@ -91,6 +98,7 @@ async def _download(channel: str, output_dir: Path, limit: int, min_id: int, max
 
     downloaded = []
     skipped = 0
+    files_done = 0
 
     await client.connect()
     if not await client.is_user_authorized():
@@ -144,9 +152,33 @@ async def _download(channel: str, output_dir: Path, limit: int, min_id: int, max
                 continue
 
             print(f"[telegram_download] Downloading: {safe_name}", file=sys.stderr)
+            if dl_id and _DP_OK:
+                try:
+                    _dp.update(dl_id, status="downloading", current_file=safe_name,
+                               files_done=files_done, pct=0)
+                except Exception:
+                    pass
+
+            def _make_progress_cb(name, did):
+                def _cb(current, total):
+                    if did and _DP_OK and total:
+                        try:
+                            _dp.update(did, status="downloading", current_file=name,
+                                       files_done=files_done,
+                                       pct=round(current / total * 100, 1),
+                                       downloaded_mb=round(current / (1024 * 1024), 1),
+                                       total_mb=round(total / (1024 * 1024), 1))
+                        except Exception:
+                            pass
+                return _cb
+
             try:
-                await client.download_media(message, file=str(save_path))
+                await client.download_media(
+                    message, file=str(save_path),
+                    progress_callback=_make_progress_cb(safe_name, dl_id),
+                )
                 size = save_path.stat().st_size if save_path.exists() else 0
+                files_done += 1
                 downloaded.append({
                     "message_id": message.id,
                     "filename": safe_name,
@@ -163,7 +195,7 @@ async def _download(channel: str, output_dir: Path, limit: int, min_id: int, max
     finally:
         await client.disconnect()
 
-    return {
+    result = {
         "success": True,
         "data": {
             "channel": channel,
@@ -174,6 +206,17 @@ async def _download(channel: str, output_dir: Path, limit: int, min_id: int, max
             "files": downloaded,
         },
     }
+    if dl_id and _DP_OK:
+        try:
+            _dp.complete(
+                dl_id,
+                name=channel_title,
+                output_dir=str(output_dir.resolve()),
+                downloaded_count=len(downloaded),
+            )
+        except Exception:
+            pass
+    return result
 
 
 def main():
@@ -197,7 +240,22 @@ def main():
     min_id = int(params.get("min_id", 0))
     max_id = int(params.get("max_id", 0))
 
-    result = asyncio.run(_download(channel, output_dir, limit, min_id, max_id))
+    dl_id = _dp.new_download("telegram", channel) if _DP_OK else ""
+    if dl_id and _DP_OK:
+        try:
+            _dp.update(dl_id, pid=os.getpid())
+        except Exception:
+            pass
+    try:
+        result = asyncio.run(_download(channel, output_dir, limit, min_id, max_id, dl_id))
+    except Exception as exc:
+        if dl_id and _DP_OK:
+            try:
+                _dp.fail(dl_id, str(exc))
+            except Exception:
+                pass
+        print(json.dumps({"success": False, "error": str(exc)}))
+        sys.exit(1)
     print(json.dumps(result))
 
 
