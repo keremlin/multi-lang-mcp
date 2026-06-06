@@ -520,6 +520,39 @@ def bluetooth_disconnect(name: str) -> dict:
 
 
 @mcp.tool()
+def youtube_downloader_lg(
+    url: str,
+    crf: int = 23,
+    preset: str = "medium",
+    retries: int = 3,
+    timeout: int = 30,
+) -> dict:
+    """Download a YouTube video and encode it directly to LG TV-compatible MP4 in one step.
+
+    Uses yt-dlp's native FFmpegVideoConvertor post-processor — no separate conversion needed.
+    Output: H.264 video, AAC audio, MP4 container, max 1920×1080, movflags +faststart.
+
+    Args:
+        url: Full YouTube video URL (watch?v=... or playlist link).
+        crf: H.264 quality — 0=lossless, 51=worst, 23=default. Lower = better quality, larger file.
+        preset: x264 speed/compression preset (ultrafast … veryslow). Default: medium.
+        retries: Download retries on transient errors (default 3).
+        timeout: Socket timeout in seconds per network operation (default 30).
+
+    Requires: yt-dlp, ffmpeg binary in PATH.
+    """
+    import json as _json
+    stdin = _json.dumps({
+        "url": url,
+        "crf": crf,
+        "preset": preset,
+        "retries": retries,
+        "timeout": timeout,
+    })
+    return run_python("tools/python/youtube_downloader_lg.py", stdin_data=stdin, timeout=7200)
+
+
+@mcp.tool()
 def video_converter_lg(
     input_path: str,
     output_path: str = "",

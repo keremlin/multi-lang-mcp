@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "youtube_downloader_lg — input",
+  "type": "object",
+  "required": ["url"],
+  "additionalProperties": false,
+  "properties": {
+    "url": {
+      "type": "string",
+      "description": "Full YouTube video or playlist URL"
+    },
+    "crf": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 51,
+      "default": 23,
+      "description": "H.264 constant rate factor: 0=lossless, 51=worst, 23=default"
+    },
+    "preset": {
+      "type": "string",
+      "enum": ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"],
+      "default": "medium",
+      "description": "x264 encoding speed/compression preset — slower means smaller file"
+    },
+    "retries": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 3,
+      "description": "Number of download retries on transient errors"
+    },
+    "timeout": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 30,
+      "description": "Socket timeout in seconds for each network operation"
+    }
+  }
+}
