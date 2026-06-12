@@ -1,36 +1,35 @@
 """
 WC_analyze_match — full World Cup match analysis orchestrator.
 
-Internally calls all WC sub-tools and synthesises a complete betting analysis:
-  1. Fetch form & goals for team_a  (FBref via wc_team_stats)
-  2. Fetch form & goals for team_b  (FBref via wc_team_stats)
-  3. Fetch national Elo for both    (eloratings.net via wc_elo_rating)
-  4. Fetch H2H history              (FBref via wc_head_to_head)
-  5. Predict win/draw/loss          (wc_predict_outcome)
-  6. Predict score distribution     (wc_predict_score)
+Reads team data from Supabase (wc_team_stats) — fast, no scraping.
+Falls back to the built-in Elo table if a team is not in the DB.
+
+Steps:
+  1. Read team_a stats from Supabase wc_team_stats
+  2. Read team_b stats from Supabase wc_team_stats
+  3. Predict win/draw/loss (Elo + form + goals blend)
+  4. Predict score distribution (Poisson + Dixon-Coles)
+  5. Return betting summary
 
 Input (stdin JSON):
-  team_a          str    Team A name (e.g. "Argentina")
-  team_b          str    Team B name (e.g. "Germany")
-  league          str    FBref league string (default "INT-World Cup")
-  season          str    Season year (default "2026")
-  elo_a           float  Override Elo for team A (optional — fetched if omitted)
-  elo_b           float  Override Elo for team B (optional — fetched if omitted)
-  n_recent        int    Recent matches for form analysis (default 10)
-  home_advantage  float  Elo bonus for team A if home advantage applies (default 0)
+  team_a          str    Team A name (e.g. "United States")
+  team_b          str    Team B name (e.g. "Paraguay")
+  elo_a           float  Override Elo for team A (optional)
+  elo_b           float  Override Elo for team B (optional)
+  home_advantage  float  Elo bonus for team A if home advantage (default 0)
+  league          str    Unused — kept for API compatibility
+  season          str    Unused — kept for API compatibility
 
 Output:
   {
     "success": true,
     "data": {
-      "match": "Argentina vs Germany",
+      "match": "United States vs Paraguay",
       "team_a_stats": {...},
       "team_b_stats": {...},
-      "elo": {...},
-      "head_to_head": {...},
       "prediction": {
         "outcome_probs": {...},
-        "score_distribution": {...},
+        "score_distribution": [...],
         "markets": {...}
       },
       "betting_summary": "..."
@@ -46,9 +45,6 @@ _ROOT = Path(__file__).parent.parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from tools.python.wc_team_stats import fetch_team_stats
-from tools.python.wc_elo_rating import fetch_elo_ratings
-from tools.python.wc_head_to_head import fetch_head_to_head
 from tools.python.wc_predict_outcome import predict_outcome
 from tools.python.wc_predict_score import predict_score
 from shared.wc_models import compute_lambda
@@ -58,59 +54,55 @@ logger = logging.getLogger(__name__)
 _DEFAULT_LEAGUE = "INT-World Cup"
 _DEFAULT_SEASON = "2026"
 
-# Approximate Elo fallbacks for major 2026 WC teams (used when scraping fails)
+# Elo fallback when team is not in DB
 _ELO_FALLBACK = {
     "argentina": 2141, "france": 2086, "england": 2065, "spain": 2047,
     "brazil": 2026, "portugal": 1985, "netherlands": 1984, "germany": 1978,
-    "belgium": 1966, "italy": 1963, "croatia": 1956, "uruguay": 1954,
-    "colombia": 1935, "mexico": 1901, "usa": 1891, "senegal": 1884,
-    "morocco": 1882, "japan": 1878, "south korea": 1862, "australia": 1845,
-    "poland": 1858, "switzerland": 1895, "denmark": 1910, "austria": 1879,
-    "turkey": 1868, "iran": 1860, "nigeria": 1855, "ecuador": 1851,
-    "chile": 1871, "canada": 1866, "peru": 1848, "ghana": 1839,
+    "belgium": 1966, "croatia": 1956, "uruguay": 1954, "colombia": 1935,
+    "switzerland": 1895, "mexico": 1901, "united states": 1891, "senegal": 1884,
+    "morocco": 1882, "sweden": 1893, "japan": 1878, "austria": 1879,
+    "south korea": 1862, "iran": 1860, "norway": 1852, "australia": 1845,
+    "ecuador": 1851, "turkey": 1868, "canada": 1866, "scotland": 1831,
+    "paraguay": 1832, "czechia": 1828, "algeria": 1820, "ivory coast": 1798,
+    "egypt": 1791, "bosnia-herzegovina": 1771, "ghana": 1839,
+    "tunisia": 1748, "saudi arabia": 1748, "qatar": 1744, "south africa": 1652,
+    "cape verde islands": 1718, "jordan": 1711, "iraq": 1712,
+    "congo dr": 1698, "panama": 1699, "uzbekistan": 1681,
+    "curaçao": 1581, "haiti": 1602, "new zealand": 1601,
 }
 
 
-def _lookup_elo_fallback(team: str) -> float | None:
-    return _ELO_FALLBACK.get(team.lower().strip())
-
-
-def _extract_elo_from_result(result: dict, team: str) -> float | None:
-    """Try to pull a numeric Elo rating from a wc_elo_rating response."""
-    if not result.get("success"):
+def _get_team_from_db(team_name: str) -> dict | None:
+    """Fetch one team's stats row from Supabase."""
+    try:
+        from shared.supabase_client import SupabaseClient
+        db = SupabaseClient()
+        rows = db.select("wc_team_stats", filters={"name": team_name})
+        return rows[0] if rows else None
+    except Exception as exc:
+        logger.debug("Supabase team lookup failed for %s: %s", team_name, exc)
         return None
-    data = result.get("data", {})
-    matches = data.get("matches", [])
-    for entry in matches:
-        if isinstance(entry, dict):
-            for key in ("elo", "rating", "Elo", "Rating"):
-                val = entry.get(key)
-                if val is not None:
-                    try:
-                        return float(str(val).replace(",", ""))
-                    except ValueError:
-                        pass
-            # Try parsing raw text entries
-            for v in entry.values():
-                try:
-                    f = float(str(v).replace(",", ""))
-                    if 1500 < f < 2500:  # plausible Elo range
-                        return f
-                except ValueError:
-                    pass
-    return None
+
+
+def _resolve_elo(team_name: str, db_row: dict | None, override: float) -> tuple[float, str]:
+    """Return (elo, source_label)."""
+    if override and override > 0:
+        return float(override), "manual override"
+    if db_row and db_row.get("elo"):
+        return float(db_row["elo"]), "supabase"
+    fallback = _ELO_FALLBACK.get(team_name.lower().strip())
+    if fallback:
+        return float(fallback), "fallback table"
+    return None, "unavailable"
 
 
 def _betting_summary(
     team_a: str, team_b: str,
     pw: float, pd: float, pl: float,
     lambda_a: float, lambda_b: float,
-    top: list,
-    markets: dict,
-    elo_diff: float,
+    top: list, markets: dict, elo_diff: float,
 ) -> str:
     lines = [f"=== {team_a} vs {team_b} — Betting Summary ==="]
-
     lines.append(f"\nOutcome probabilities:")
     lines.append(f"  {team_a} win : {pw}%")
     lines.append(f"  Draw        : {pd}%")
@@ -118,9 +110,9 @@ def _betting_summary(
 
     if abs(elo_diff) > 120:
         fav = team_a if elo_diff > 0 else team_b
-        lines.append(f"\n⚡ Clear favourite: {fav} (Elo gap {abs(elo_diff):.0f})")
+        lines.append(f"\nClear favourite: {fav} (Elo gap {abs(elo_diff):.0f})")
     elif abs(elo_diff) < 40:
-        lines.append(f"\n⚖  Very even match — draw or small-margin win most likely")
+        lines.append(f"\nVery even match — draw or small-margin win most likely")
 
     lines.append(f"\nExpected goals: {team_a} {lambda_a:.2f}  |  {team_b} {lambda_b:.2f}")
     lines.append(f"\nTop-5 most probable scores:")
@@ -128,145 +120,115 @@ def _betting_summary(
         lines.append(f"  {s['score']:>5}  {s['probability_pct']:.1f}%")
 
     lines.append(f"\nKey markets:")
-    lines.append(f"  Over 1.5 goals : {markets.get('over_1_5_pct', '?')}%")
-    lines.append(f"  Over 2.5 goals : {markets.get('over_2_5_pct', '?')}%")
-    lines.append(f"  Both teams score (BTTS): {markets.get('btts_pct', '?')}%")
-    lines.append(f"  Under 2.5 goals: {markets.get('under_2_5_pct', '?')}%")
-
-    lines.append(
-        "\n⚠  These are model probabilities, not guarantees. "
-        "Compare to bookmaker odds to find value bets."
-    )
+    lines.append(f"  Over 1.5 goals  : {markets.get('over_1_5_pct', '?')}%")
+    lines.append(f"  Over 2.5 goals  : {markets.get('over_2_5_pct', '?')}%")
+    lines.append(f"  Both score BTTS : {markets.get('btts_pct', '?')}%")
+    lines.append(f"  Under 2.5 goals : {markets.get('under_2_5_pct', '?')}%")
+    lines.append("\nThese are model probabilities, not guarantees.")
     return "\n".join(lines)
 
 
 def analyze_match(
     team_a: str,
     team_b: str,
-    league: str = _DEFAULT_LEAGUE,
-    season: str = _DEFAULT_SEASON,
-    elo_a_override: float | None = None,
-    elo_b_override: float | None = None,
-    n_recent: int = 10,
+    elo_a_override: float = 0.0,
+    elo_b_override: float = 0.0,
     home_adv: float = 0.0,
 ) -> dict:
-    report = {}
+    # --- Step 1 & 2: Read team stats from Supabase ---
+    row_a = _get_team_from_db(team_a)
+    row_b = _get_team_from_db(team_b)
 
-    # --- Step 1 & 2: Team stats ---
-    stats_a = fetch_team_stats(team_a, league, season, n_recent)
-    stats_b = fetch_team_stats(team_b, league, season, n_recent)
-    report["team_a_stats"] = stats_a.get("data") if stats_a.get("success") else {"error": stats_a.get("error")}
-    report["team_b_stats"] = stats_b.get("data") if stats_b.get("success") else {"error": stats_b.get("error")}
+    def _stat(row, key, default=None):
+        return row.get(key) if row else default
 
-    # Extract form strings
-    form_a = (stats_a.get("data") or {}).get("form_last5", "")
-    form_b = (stats_b.get("data") or {}).get("form_last5", "")
-
-    # Extract goal averages
-    data_a = stats_a.get("data") or {}
-    data_b = stats_b.get("data") or {}
-    avg_gf_a = data_a.get("avg_goals_scored")
-    avg_ga_a = data_a.get("avg_goals_conceded")
-    avg_gf_b = data_b.get("avg_goals_scored")
-    avg_ga_b = data_b.get("avg_goals_conceded")
-
-    # --- Step 3: Elo ratings ---
-    elo_info = {}
-    if elo_a_override is not None:
-        elo_a = elo_a_override
-        elo_info["team_a_elo"] = elo_a
-        elo_info["team_a_source"] = "manual override"
-    else:
-        elo_res_a = fetch_elo_ratings(team=team_a)
-        elo_a = _extract_elo_from_result(elo_res_a, team_a)
-        if elo_a is None:
-            elo_a = _lookup_elo_fallback(team_a)
-            elo_info["team_a_elo"] = elo_a
-            elo_info["team_a_source"] = "fallback table" if elo_a else "unavailable"
-        else:
-            elo_info["team_a_elo"] = elo_a
-            elo_info["team_a_source"] = "eloratings.net"
-
-    if elo_b_override is not None:
-        elo_b = elo_b_override
-        elo_info["team_b_elo"] = elo_b
-        elo_info["team_b_source"] = "manual override"
-    else:
-        elo_res_b = fetch_elo_ratings(team=team_b)
-        elo_b = _extract_elo_from_result(elo_res_b, team_b)
-        if elo_b is None:
-            elo_b = _lookup_elo_fallback(team_b)
-            elo_info["team_b_elo"] = elo_b
-            elo_info["team_b_source"] = "fallback table" if elo_b else "unavailable"
-        else:
-            elo_info["team_b_elo"] = elo_b
-            elo_info["team_b_source"] = "eloratings.net"
-
-    report["elo"] = elo_info
+    elo_a, source_a = _resolve_elo(team_a, row_a, elo_a_override)
+    elo_b, source_b = _resolve_elo(team_b, row_b, elo_b_override)
 
     if elo_a is None or elo_b is None:
+        missing = team_a if elo_a is None else team_b
         return {
             "success": False,
-            "error": (
-                f"Elo rating unavailable for "
-                f"{'team_a' if elo_a is None else 'team_b'}. "
-                "Provide elo_a / elo_b manually in the request."
-            ),
-            "partial_report": report,
+            "error": f"Elo unavailable for '{missing}'. Provide elo_a/elo_b manually.",
         }
 
-    # --- Step 4: Head-to-head ---
-    h2h = fetch_head_to_head(team_a, team_b, league, season, n_matches=20)
-    report["head_to_head"] = h2h.get("data") if h2h.get("success") else {"error": h2h.get("error")}
+    form_a = _stat(row_a, "form_last5", "")
+    form_b = _stat(row_b, "form_last5", "")
+    avg_gf_a = _stat(row_a, "avg_goals_scored")
+    avg_ga_a = _stat(row_a, "avg_goals_conceded")
+    avg_gf_b = _stat(row_b, "avg_goals_scored")
+    avg_ga_b = _stat(row_b, "avg_goals_conceded")
 
-    # --- Step 5: Predict outcome ---
+    team_a_info = {
+        "team": team_a,
+        "elo": elo_a,
+        "elo_source": source_a,
+        "group": _stat(row_a, "group_name"),
+        "form_last5": form_a,
+        "avg_goals_scored": avg_gf_a,
+        "avg_goals_conceded": avg_ga_a,
+        "matches_analyzed": _stat(row_a, "matches_analyzed", 0),
+    }
+    team_b_info = {
+        "team": team_b,
+        "elo": elo_b,
+        "elo_source": source_b,
+        "group": _stat(row_b, "group_name"),
+        "form_last5": form_b,
+        "avg_goals_scored": avg_gf_b,
+        "avg_goals_conceded": avg_ga_b,
+        "matches_analyzed": _stat(row_b, "matches_analyzed", 0),
+    }
+
+    # --- Step 3: Predict outcome ---
     outcome = predict_outcome(
         team_a=team_a, team_b=team_b,
         elo_a=elo_a, elo_b=elo_b,
-        form_a=form_a, form_b=form_b,
-        avg_gf_a=avg_gf_a, avg_ga_a=avg_ga_a,
-        avg_gf_b=avg_gf_b, avg_ga_b=avg_ga_b,
+        form_a=form_a or "", form_b=form_b or "",
+        avg_gf_a=float(avg_gf_a) if avg_gf_a else None,
+        avg_ga_a=float(avg_ga_a) if avg_ga_a else None,
+        avg_gf_b=float(avg_gf_b) if avg_gf_b else None,
+        avg_ga_b=float(avg_ga_b) if avg_ga_b else None,
         home_adv=home_adv,
     )
 
-    # --- Step 6: Predict score ---
+    # --- Step 4: Predict score ---
     has_goals = all(v is not None for v in [avg_gf_a, avg_ga_a, avg_gf_b, avg_ga_b])
     if has_goals:
-        la = compute_lambda(avg_gf_a, avg_ga_b)
-        lb = compute_lambda(avg_gf_b, avg_ga_a)
+        la = compute_lambda(float(avg_gf_a), float(avg_ga_b))
+        lb = compute_lambda(float(avg_gf_b), float(avg_ga_a))
     else:
-        # Estimate lambdas from Elo (rough heuristic: avg WC is ~1.3 gpg)
         elo_ratio = 10 ** ((elo_a - elo_b) / 400)
         la = round(1.3 * elo_ratio / (1 + elo_ratio), 2)
         lb = round(1.3 / (1 + elo_ratio), 2)
 
-    score_dist = predict_score(
-        lambda_a=la, lambda_b=lb,
-        team_a=team_a, team_b=team_b,
-    )
+    score_dist = predict_score(lambda_a=la, lambda_b=lb, team_a=team_a, team_b=team_b)
 
     final = (outcome.get("data") or {}).get("final_probs", {})
     pw = final.get(f"{team_a}_win", 0)
-    pd = final.get("draw", 0)
+    pd_ = final.get("draw", 0)
     pl = final.get(f"{team_b}_win", 0)
     markets = (score_dist.get("data") or {}).get("markets", {})
     top = (score_dist.get("data") or {}).get("top_scores", [])
 
-    report["prediction"] = {
-        "outcome_probs": final,
-        "expected_goals": {"lambda_a": la, "lambda_b": lb},
-        "score_distribution": top,
-        "markets": markets,
-        "full_outcome_detail": outcome.get("data"),
+    return {
+        "success": True,
+        "data": {
+            "match": f"{team_a} vs {team_b}",
+            "team_a_stats": team_a_info,
+            "team_b_stats": team_b_info,
+            "prediction": {
+                "outcome_probs": final,
+                "expected_goals": {"lambda_a": la, "lambda_b": lb},
+                "score_distribution": top,
+                "markets": markets,
+                "full_outcome_detail": outcome.get("data"),
+            },
+            "betting_summary": _betting_summary(
+                team_a, team_b, pw, pd_, pl, la, lb, top, markets, elo_a - elo_b
+            ),
+        },
     }
-    report["betting_summary"] = _betting_summary(
-        team_a, team_b, pw, pd, pl, la, lb, top, markets, elo_a - elo_b
-    )
-    report["match"] = f"{team_a} vs {team_b}"
-    report["league"] = league
-    report["season"] = season
-
-    return {"success": True, "data": report}
 
 
 def main():
@@ -290,12 +252,9 @@ def main():
         result = analyze_match(
             team_a=team_a,
             team_b=team_b,
-            league=p.get("league", _DEFAULT_LEAGUE),
-            season=str(p.get("season", _DEFAULT_SEASON)),
-            elo_a_override=float(p["elo_a"]) if "elo_a" in p else None,
-            elo_b_override=float(p["elo_b"]) if "elo_b" in p else None,
-            n_recent=int(p.get("n_recent", 10)),
-            home_adv=float(p.get("home_advantage", 0.0)),
+            elo_a_override=float(p.get("elo_a", 0) or 0),
+            elo_b_override=float(p.get("elo_b", 0) or 0),
+            home_adv=float(p.get("home_advantage", 0) or 0),
         )
     except Exception as exc:
         result = {"success": False, "error": str(exc)}
