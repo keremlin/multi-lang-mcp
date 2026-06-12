@@ -855,6 +855,22 @@ def WC_db_sync(
 
 
 @mcp_tool()
+def WC_team_sync(
+    team: str = "",
+    elo_only: bool = False,
+) -> dict:
+    """Update team Elo and form stats in Supabase wc_team_stats.
+
+    Args:
+        team: Team name to update (empty = update all 48 teams).
+        elo_only: Only refresh Elo from built-in table, skip FBref scraping (default false).
+    """
+    import json as _json
+    stdin = _json.dumps({"team": team, "elo_only": elo_only})
+    return run_python("tools/python/wc_team_sync.py", stdin_data=stdin, timeout=120)
+
+
+@mcp_tool()
 def WC_analyze_match(
     team_a: str,
     team_b: str,

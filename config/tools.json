@@ -279,6 +279,13 @@
       "script": "tools/python/wc_db_sync.py",
       "description": "Seed or refresh the Supabase wc_matches table from football-data.org or TheSportsDB",
       "timeout": 60
+    },
+    {
+      "name": "WC_team_sync",
+      "runtime": "python",
+      "script": "tools/python/wc_team_sync.py",
+      "description": "Update team Elo and form stats in Supabase wc_team_stats from FBref (with short timeout)",
+      "timeout": 120
     }
   ]
 }
