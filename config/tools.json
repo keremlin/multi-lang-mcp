@@ -223,6 +223,55 @@
       "script": "tools/python/activity_log_query.py",
       "description": "Query the MCP activity log by date, tool name, status, or free-text search",
       "timeout": 15
+    },
+    {
+      "name": "WC_team_stats",
+      "runtime": "python",
+      "script": "tools/python/wc_team_stats.py",
+      "description": "Fetch a national team's recent form, goals scored/conceded, and match results from FBref",
+      "timeout": 120
+    },
+    {
+      "name": "WC_elo_rating",
+      "runtime": "python",
+      "script": "tools/python/wc_elo_rating.py",
+      "description": "Fetch national team Elo ratings from eloratings.net, or club Elo from clubelo.com via soccerdata",
+      "timeout": 30
+    },
+    {
+      "name": "WC_head_to_head",
+      "runtime": "python",
+      "script": "tools/python/wc_head_to_head.py",
+      "description": "Fetch historical head-to-head match records between two teams from FBref",
+      "timeout": 120
+    },
+    {
+      "name": "WC_predict_outcome",
+      "runtime": "python",
+      "script": "tools/python/wc_predict_outcome.py",
+      "description": "Predict win/draw/loss probabilities using Elo rating gap, recent form, and goals-based Poisson model",
+      "timeout": 15
+    },
+    {
+      "name": "WC_predict_score",
+      "runtime": "python",
+      "script": "tools/python/wc_predict_score.py",
+      "description": "Predict exact-score probability distribution using Poisson regression with Dixon-Coles correction",
+      "timeout": 15
+    },
+    {
+      "name": "WC_analyze_match",
+      "runtime": "python",
+      "script": "tools/python/wc_analyze_match.py",
+      "description": "Full World Cup match orchestrator: fetches team stats, Elo, H2H, then runs outcome and score predictions in one call",
+      "timeout": 300
+    },
+    {
+      "name": "WC_schedule",
+      "runtime": "python",
+      "script": "tools/python/wc_schedule.py",
+      "description": "Fetch World Cup fixtures and results for a given date (default: today) from soccerdata — FBref, ESPN, or Sofascore",
+      "timeout": 120
     }
   ]
 }

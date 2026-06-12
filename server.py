@@ -659,6 +659,222 @@ def activity_log_query(
     return run_python("tools/python/activity_log_query.py", stdin_data=stdin, timeout=15)
 
 
+@mcp_tool()
+def WC_team_stats(
+    team: str,
+    league: str = "INT-World Cup",
+    season: str = "2026",
+    n_recent: int = 10,
+) -> dict:
+    """Fetch a national team's recent form, goal stats, and match results from FBref.
+
+    Args:
+        team: Team name as it appears in FBref (e.g. 'Argentina', 'Germany').
+        league: soccerdata league string (default 'INT-World Cup').
+        season: Season year string (default '2026').
+        n_recent: Number of recent completed matches to analyse (default 10).
+
+    Returns win rate, form string, avg goals scored/conceded, clean sheets, recent results.
+    """
+    import json as _json
+    stdin = _json.dumps({"team": team, "league": league, "season": season, "n_recent": n_recent})
+    return run_python("tools/python/wc_team_stats.py", stdin_data=stdin, timeout=120)
+
+
+@mcp_tool()
+def WC_elo_rating(
+    team: str = "",
+    top_n: int = 30,
+    source: str = "elo",
+    timeout: int = 20,
+) -> dict:
+    """Fetch national team Elo ratings from eloratings.net or club Elo from clubelo.com.
+
+    Args:
+        team: Team name to look up (e.g. 'Argentina'). Leave empty to get the top-N list.
+        top_n: Number of top teams to return when team is empty (default 30).
+        source: 'elo' (default, national team eloratings.net) or 'clubelo' (club teams via soccerdata).
+        timeout: HTTP request timeout in seconds (default 20).
+
+    Returns Elo rating, rank, and source information.
+    """
+    import json as _json
+    stdin = _json.dumps({"team": team, "top_n": top_n, "source": source, "timeout": timeout})
+    return run_python("tools/python/wc_elo_rating.py", stdin_data=stdin, timeout=30)
+
+
+@mcp_tool()
+def WC_head_to_head(
+    team_a: str,
+    team_b: str,
+    league: str = "INT-World Cup",
+    season: str = "2026",
+    n_matches: int = 20,
+) -> dict:
+    """Fetch historical head-to-head match records between two teams from FBref.
+
+    Args:
+        team_a: First team name (e.g. 'Argentina').
+        team_b: Second team name (e.g. 'Germany').
+        league: FBref league string (default 'INT-World Cup').
+        season: Season year string; leave empty for all seasons.
+        n_matches: Maximum number of recent H2H matches to return (default 20).
+
+    Returns win/draw/loss counts, avg goals, and per-match details.
+    """
+    import json as _json
+    stdin = _json.dumps({"team_a": team_a, "team_b": team_b, "league": league, "season": season, "n_matches": n_matches})
+    return run_python("tools/python/wc_head_to_head.py", stdin_data=stdin, timeout=120)
+
+
+@mcp_tool()
+def WC_predict_outcome(
+    team_a: str,
+    team_b: str,
+    elo_a: float,
+    elo_b: float,
+    form_a: str = "",
+    form_b: str = "",
+    avg_gf_a: float = 0.0,
+    avg_ga_a: float = 0.0,
+    avg_gf_b: float = 0.0,
+    avg_ga_b: float = 0.0,
+    home_advantage: float = 0.0,
+) -> dict:
+    """Predict win/draw/loss probabilities using Elo ratings, recent form, and goals model.
+
+    Args:
+        team_a: Team A label.
+        team_b: Team B label.
+        elo_a: Team A Elo rating (e.g. 2050).
+        elo_b: Team B Elo rating (e.g. 1980).
+        form_a: Recent form string for A, newest last (e.g. 'WWDWL').
+        form_b: Recent form string for B, newest last (e.g. 'WLWDW').
+        avg_gf_a: Team A average goals scored per game (enables goals model).
+        avg_ga_a: Team A average goals conceded per game.
+        avg_gf_b: Team B average goals scored per game.
+        avg_ga_b: Team B average goals conceded per game.
+        home_advantage: Extra Elo points for team A if playing at home (default 0 = neutral).
+
+    Returns Elo, form-adjusted, and final blended win/draw/loss percentages.
+    """
+    import json as _json
+    payload = {
+        "team_a": team_a, "team_b": team_b,
+        "elo_a": elo_a, "elo_b": elo_b,
+        "form_a": form_a, "form_b": form_b,
+        "home_advantage": home_advantage,
+    }
+    if avg_gf_a > 0:
+        payload.update({"avg_gf_a": avg_gf_a, "avg_ga_a": avg_ga_a, "avg_gf_b": avg_gf_b, "avg_ga_b": avg_ga_b})
+    return run_python("tools/python/wc_predict_outcome.py", stdin_data=_json.dumps(payload), timeout=15)
+
+
+@mcp_tool()
+def WC_predict_score(
+    lambda_a: float,
+    lambda_b: float,
+    team_a: str = "Team A",
+    team_b: str = "Team B",
+    max_goals: int = 8,
+    top_n: int = 12,
+) -> dict:
+    """Predict exact-score probabilities using Poisson regression with Dixon-Coles correction.
+
+    Args:
+        lambda_a: Expected goals for team A (e.g. 1.8). Use WC_predict_outcome to derive these.
+        lambda_b: Expected goals for team B (e.g. 1.2).
+        team_a: Label for team A.
+        team_b: Label for team B.
+        max_goals: Maximum goals per team to model (default 8).
+        top_n: Number of top score lines to return (default 12).
+
+    Returns top-N most likely scores, over/under 2.5, BTTS, and outcome percentages.
+    """
+    import json as _json
+    stdin = _json.dumps({
+        "lambda_a": lambda_a, "lambda_b": lambda_b,
+        "team_a": team_a, "team_b": team_b,
+        "max_goals": max_goals, "top_n": top_n,
+    })
+    return run_python("tools/python/wc_predict_score.py", stdin_data=stdin, timeout=15)
+
+
+@mcp_tool()
+def WC_schedule(
+    date: str = "today",
+    league: str = "INT-World Cup",
+    season: str = "2026",
+    source: str = "auto",
+    all_matches: bool = False,
+) -> dict:
+    """Fetch World Cup fixtures and results for a given date from soccerdata.
+
+    Tries FBref → ESPN → Sofascore automatically and returns whichever works.
+
+    Args:
+        date: "today" (default), "YYYY-MM-DD", or any date string.
+        league: soccerdata league string (default 'INT-World Cup').
+        season: Season year (default '2026').
+        source: 'auto' (default), 'fbref', 'espn', or 'sofascore'.
+        all_matches: Return the full season schedule instead of a single date (default false).
+
+    Returns each match with home/away teams, kickoff time, venue, group,
+    and score + status (finished/upcoming) for completed games.
+    """
+    import json as _json
+    stdin = _json.dumps({
+        "date": date,
+        "league": league,
+        "season": season,
+        "source": source,
+        "all": all_matches,
+    })
+    return run_python("tools/python/wc_schedule.py", stdin_data=stdin, timeout=120)
+
+
+@mcp_tool()
+def WC_analyze_match(
+    team_a: str,
+    team_b: str,
+    league: str = "INT-World Cup",
+    season: str = "2026",
+    elo_a: float = 0.0,
+    elo_b: float = 0.0,
+    n_recent: int = 10,
+    home_advantage: float = 0.0,
+) -> dict:
+    """Full World Cup match analysis — fetches data and runs all prediction models in one call.
+
+    Internally calls WC_team_stats (×2), WC_elo_rating (×2), WC_head_to_head,
+    WC_predict_outcome, and WC_predict_score, then synthesises a betting summary.
+
+    Args:
+        team_a: Team A name (e.g. 'Argentina').
+        team_b: Team B name (e.g. 'Germany').
+        league: FBref league string (default 'INT-World Cup').
+        season: Season year string (default '2026').
+        elo_a: Override Elo for team A (0 = auto-fetch from eloratings.net).
+        elo_b: Override Elo for team B (0 = auto-fetch).
+        n_recent: Recent matches for form analysis (default 10).
+        home_advantage: Elo bonus for team A if playing at home (default 0 = neutral).
+
+    Returns team stats, Elo info, H2H history, outcome probabilities,
+    score distribution, and a plain-language betting summary.
+    """
+    import json as _json
+    payload = {
+        "team_a": team_a, "team_b": team_b,
+        "league": league, "season": season,
+        "n_recent": n_recent, "home_advantage": home_advantage,
+    }
+    if elo_a > 0:
+        payload["elo_a"] = elo_a
+    if elo_b > 0:
+        payload["elo_b"] = elo_b
+    return run_python("tools/python/wc_analyze_match.py", stdin_data=_json.dumps(payload), timeout=300)
+
+
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Multi-language MCP server")
     p.add_argument(
