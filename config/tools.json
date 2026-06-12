@@ -281,6 +281,13 @@
       "timeout": 60
     },
     {
+      "name": "WC_match_info_ui",
+      "runtime": "python",
+      "script": "tools/python/wc_match_info_ui.py",
+      "description": "Show a maximized match prediction UI window for two WC teams",
+      "timeout": 30
+    },
+    {
       "name": "WC_team_sync",
       "runtime": "python",
       "script": "tools/python/wc_team_sync.py",

@@ -855,6 +855,36 @@ def WC_db_sync(
 
 
 @mcp_tool()
+def WC_match_info_ui(
+    team_a: str,
+    team_b: str,
+    elo_a: float = 0,
+    elo_b: float = 0,
+    home_advantage: float = 0,
+) -> dict:
+    """Open a maximized match prediction window for two World Cup teams.
+
+    Fetches team data from Supabase, runs prediction models, then launches
+    a full-screen dark-theme UI showing team stats, win probabilities,
+    expected goals, top scores, and betting markets. Returns instantly.
+
+    Args:
+        team_a: First team (e.g. 'Brazil'). Use exact name from WC_schedule.
+        team_b: Second team (e.g. 'United States').
+        elo_a: Override Elo for team A (0 = use DB value).
+        elo_b: Override Elo for team B (0 = use DB value).
+        home_advantage: Elo bonus for team A if playing at home (default 0).
+    """
+    import json as _json
+    stdin = _json.dumps({
+        "team_a": team_a, "team_b": team_b,
+        "elo_a": elo_a, "elo_b": elo_b,
+        "home_advantage": home_advantage,
+    })
+    return run_python("tools/python/wc_match_info_ui.py", stdin_data=stdin, timeout=30)
+
+
+@mcp_tool()
 def WC_team_sync(
     team: str = "",
     elo_only: bool = False,
