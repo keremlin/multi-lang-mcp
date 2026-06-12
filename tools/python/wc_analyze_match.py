@@ -1,15 +1,15 @@
 """
 WC_analyze_match — full World Cup match analysis orchestrator.
 
-Reads team data from Supabase (wc_team_stats) — fast, no scraping.
+Reads team data from Supabase (wc_team_stats, wc_head_to_head) — fast, no scraping.
 Falls back to the built-in Elo table if a team is not in the DB.
 
 Steps:
-  1. Read team_a stats from Supabase wc_team_stats
-  2. Read team_b stats from Supabase wc_team_stats
-  3. Predict win/draw/loss (Elo + form + goals blend)
+  1. Read team_a + team_b stats from Supabase wc_team_stats
+  2. Read H2H record from wc_head_to_head
+  3. Predict win/draw/loss (Elo + form + goals blend, H2H-adjusted)
   4. Predict score distribution (Poisson + Dixon-Coles)
-  5. Return betting summary
+  5. Return full betting summary
 
 Input (stdin JSON):
   team_a          str    Team A name (e.g. "United States")
@@ -24,13 +24,16 @@ Output:
   {
     "success": true,
     "data": {
-      "match": "United States vs Paraguay",
-      "team_a_stats": {...},
+      "match": "...",
+      "team_a_stats": {elo, fifa_ranking, form_last5, form_last10, avg_goals_scored, ...},
       "team_b_stats": {...},
+      "head_to_head": {played, team_a_wins, draws, team_b_wins, goals_a, goals_b, last_match},
       "prediction": {
         "outcome_probs": {...},
+        "expected_goals": {...},
         "score_distribution": [...],
-        "markets": {...}
+        "markets": {...},
+        "h2h_adjustment_pct": N
       },
       "betting_summary": "..."
     }
@@ -51,9 +54,6 @@ from shared.wc_models import compute_lambda
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_LEAGUE = "INT-World Cup"
-_DEFAULT_SEASON = "2026"
-
 # Elo fallback when team is not in DB
 _ELO_FALLBACK = {
     "argentina": 2141, "france": 2086, "england": 2065, "spain": 2047,
@@ -71,32 +71,63 @@ _ELO_FALLBACK = {
     "curaçao": 1581, "haiti": 1602, "new zealand": 1601,
 }
 
-# Common name aliases → canonical key in _ELO_FALLBACK
 _TEAM_ALIASES = {
     "usa": "united states", "us": "united states", "usmnt": "united states",
-    "uae": "united arab emirates", "drc": "congo dr",
-    "ivory coast": "ivory coast", "côte d'ivoire": "ivory coast",
-    "republic of ireland": "ireland", "northern ireland": "ireland",
+    "drc": "congo dr",
+    "côte d'ivoire": "ivory coast",
     "czech republic": "czechia",
-    "south korea": "south korea", "korea republic": "south korea",
+    "korea republic": "south korea",
     "bosnia": "bosnia-herzegovina",
 }
 
 
 def _get_team_from_db(team_name: str) -> dict | None:
-    """Fetch one team's stats row from Supabase."""
     try:
         from shared.supabase_client import SupabaseClient
-        db = SupabaseClient()
-        rows = db.select("wc_team_stats", filters={"name": team_name})
+        rows = SupabaseClient().select("wc_team_stats", filters={"name": team_name})
         return rows[0] if rows else None
     except Exception as exc:
-        logger.debug("Supabase team lookup failed for %s: %s", team_name, exc)
+        logger.debug("DB team lookup failed for %s: %s", team_name, exc)
+        return None
+
+
+def _get_h2h(team_a: str, team_b: str) -> dict | None:
+    """Fetch H2H record from wc_head_to_head (canonical alphabetical order in DB)."""
+    try:
+        from shared.supabase_client import SupabaseClient
+        db_a, db_b = sorted([team_a, team_b])
+        rows = SupabaseClient().select("wc_head_to_head",
+                                       filters={"team_a": db_a, "team_b": db_b})
+        if not rows:
+            return None
+        r = rows[0]
+        # Return stats from team_a's perspective
+        if db_a == team_a:
+            return {
+                "played":      r["played"],
+                "team_a_wins": r["team_a_wins"],
+                "draws":       r["draws"],
+                "team_b_wins": r["team_b_wins"],
+                "goals_a":     r["goals_a"],
+                "goals_b":     r["goals_b"],
+                "last_match":  r.get("last_match_date"),
+            }
+        else:
+            return {
+                "played":      r["played"],
+                "team_a_wins": r["team_b_wins"],
+                "draws":       r["draws"],
+                "team_b_wins": r["team_a_wins"],
+                "goals_a":     r["goals_b"],
+                "goals_b":     r["goals_a"],
+                "last_match":  r.get("last_match_date"),
+            }
+    except Exception as exc:
+        logger.debug("H2H lookup failed %s vs %s: %s", team_a, team_b, exc)
         return None
 
 
 def _resolve_elo(team_name: str, db_row: dict | None, override: float) -> tuple[float, str]:
-    """Return (elo, source_label)."""
     if override and override > 0:
         return float(override), "manual override"
     if db_row and db_row.get("elo"):
@@ -109,13 +140,52 @@ def _resolve_elo(team_name: str, db_row: dict | None, override: float) -> tuple[
     return None, "unavailable"
 
 
+def _apply_h2h_adjustment(
+    pw: float, pd: float, pl: float, h2h: dict | None
+) -> tuple[float, float, float, float]:
+    """
+    Blend Elo-based outcome probs with historical H2H win rates.
+    Weight scales from 0 (< 5 games) to max 15% (≥ 50 games).
+    Returns (pw, pd, pl, h2h_weight_pct).
+    """
+    if not h2h or h2h["played"] < 5:
+        return pw, pd, pl, 0.0
+
+    played = h2h["played"]
+    h2h_weight = min(0.15, played / 100 * 0.15 / 0.5)  # 0→15% over 0→50 games, capped at 15%
+    h2h_weight = round(min(0.15, played / 333), 4)      # simpler: 15% at 50+ games
+
+    h_pw = (h2h["team_a_wins"] / played) * 100
+    h_pd = (h2h["draws"]       / played) * 100
+    h_pl = (h2h["team_b_wins"] / played) * 100
+
+    blended_w = pw * (1 - h2h_weight) + h_pw * h2h_weight
+    blended_d = pd * (1 - h2h_weight) + h_pd * h2h_weight
+    blended_l = pl * (1 - h2h_weight) + h_pl * h2h_weight
+
+    # Renormalise
+    total = blended_w + blended_d + blended_l
+    blended_w, blended_d, blended_l = (
+        round(blended_w / total * 100, 1),
+        round(blended_d / total * 100, 1),
+        round(blended_l / total * 100, 1),
+    )
+    return blended_w, blended_d, blended_l, round(h2h_weight * 100, 1)
+
+
 def _betting_summary(
     team_a: str, team_b: str,
     pw: float, pd: float, pl: float,
     lambda_a: float, lambda_b: float,
     top: list, markets: dict, elo_diff: float,
+    h2h: dict | None,
+    ranking_a: int | None, ranking_b: int | None,
 ) -> str:
     lines = [f"=== {team_a} vs {team_b} — Betting Summary ==="]
+
+    if ranking_a and ranking_b:
+        lines.append(f"\nFIFA World Ranking:  {team_a} #{ranking_a}  |  {team_b} #{ranking_b}")
+
     lines.append(f"\nOutcome probabilities:")
     lines.append(f"  {team_a} win : {pw}%")
     lines.append(f"  Draw        : {pd}%")
@@ -128,6 +198,15 @@ def _betting_summary(
         lines.append(f"\nVery even match — draw or small-margin win most likely")
 
     lines.append(f"\nExpected goals: {team_a} {lambda_a:.2f}  |  {team_b} {lambda_b:.2f}")
+
+    if h2h and h2h["played"] >= 3:
+        lines.append(f"\nHead-to-Head ({h2h['played']} matches):")
+        lines.append(f"  {team_a} wins : {h2h['team_a_wins']}")
+        lines.append(f"  Draws        : {h2h['draws']}")
+        lines.append(f"  {team_b} wins : {h2h['team_b_wins']}")
+        if h2h.get("last_match"):
+            lines.append(f"  Last played  : {h2h['last_match']}")
+
     lines.append(f"\nTop-5 most probable scores:")
     for s in top[:5]:
         lines.append(f"  {s['score']:>5}  {s['probability_pct']:.1f}%")
@@ -148,9 +227,10 @@ def analyze_match(
     elo_b_override: float = 0.0,
     home_adv: float = 0.0,
 ) -> dict:
-    # --- Step 1 & 2: Read team stats from Supabase ---
+    # 1 & 2 — Team stats + H2H from Supabase
     row_a = _get_team_from_db(team_a)
     row_b = _get_team_from_db(team_b)
+    h2h   = _get_h2h(team_a, team_b)
 
     def _stat(row, key, default=None):
         return row.get(key) if row else default
@@ -160,40 +240,45 @@ def analyze_match(
 
     if elo_a is None or elo_b is None:
         missing = team_a if elo_a is None else team_b
-        return {
-            "success": False,
-            "error": f"Elo unavailable for '{missing}'. Provide elo_a/elo_b manually.",
-        }
+        return {"success": False,
+                "error": f"Elo unavailable for '{missing}'. Provide elo_a/elo_b manually."}
 
-    form_a = _stat(row_a, "form_last5", "")
-    form_b = _stat(row_b, "form_last5", "")
+    form_a   = _stat(row_a, "form_last5", "")
+    form_b   = _stat(row_b, "form_last5", "")
     avg_gf_a = _stat(row_a, "avg_goals_scored")
     avg_ga_a = _stat(row_a, "avg_goals_conceded")
     avg_gf_b = _stat(row_b, "avg_goals_scored")
     avg_ga_b = _stat(row_b, "avg_goals_conceded")
 
+    rank_a = _stat(row_a, "fifa_ranking")
+    rank_b = _stat(row_b, "fifa_ranking")
+
     team_a_info = {
-        "team": team_a,
-        "elo": elo_a,
-        "elo_source": source_a,
-        "group": _stat(row_a, "group_name"),
-        "form_last5": form_a,
-        "avg_goals_scored": avg_gf_a,
+        "team":               team_a,
+        "elo":                elo_a,
+        "elo_source":         source_a,
+        "fifa_ranking":       rank_a,
+        "group":              _stat(row_a, "group_name"),
+        "form_last5":         form_a,
+        "form_last10":        _stat(row_a, "form_last10", ""),
+        "avg_goals_scored":   avg_gf_a,
         "avg_goals_conceded": avg_ga_a,
-        "matches_analyzed": _stat(row_a, "matches_analyzed", 0),
+        "matches_analyzed":   _stat(row_a, "matches_analyzed", 0),
     }
     team_b_info = {
-        "team": team_b,
-        "elo": elo_b,
-        "elo_source": source_b,
-        "group": _stat(row_b, "group_name"),
-        "form_last5": form_b,
-        "avg_goals_scored": avg_gf_b,
+        "team":               team_b,
+        "elo":                elo_b,
+        "elo_source":         source_b,
+        "fifa_ranking":       rank_b,
+        "group":              _stat(row_b, "group_name"),
+        "form_last5":         form_b,
+        "form_last10":        _stat(row_b, "form_last10", ""),
+        "avg_goals_scored":   avg_gf_b,
         "avg_goals_conceded": avg_ga_b,
-        "matches_analyzed": _stat(row_b, "matches_analyzed", 0),
+        "matches_analyzed":   _stat(row_b, "matches_analyzed", 0),
     }
 
-    # --- Step 3: Predict outcome ---
+    # 3 — Outcome prediction (Elo + form + goals)
     outcome = predict_outcome(
         team_a=team_a, team_b=team_b,
         elo_a=elo_a, elo_b=elo_b,
@@ -204,8 +289,16 @@ def analyze_match(
         avg_ga_b=float(avg_ga_b) if avg_ga_b else None,
         home_adv=home_adv,
     )
+    final = (outcome.get("data") or {}).get("final_probs", {})
+    pw  = final.get(f"{team_a}_win", 0)
+    pd_ = final.get("draw", 0)
+    pl  = final.get(f"{team_b}_win", 0)
 
-    # --- Step 4: Predict score ---
+    # Apply H2H adjustment (up to 15% weight when ≥ 50 games)
+    pw, pd_, pl, h2h_adj = _apply_h2h_adjustment(pw, pd_, pl, h2h)
+    adjusted_probs = {f"{team_a}_win": pw, "draw": pd_, f"{team_b}_win": pl}
+
+    # 4 — Score distribution
     has_goals = all(v is not None for v in [avg_gf_a, avg_ga_a, avg_gf_b, avg_ga_b])
     if has_goals:
         la = compute_lambda(float(avg_gf_a), float(avg_ga_b))
@@ -216,29 +309,27 @@ def analyze_match(
         lb = round(1.3 / (1 + elo_ratio), 2)
 
     score_dist = predict_score(lambda_a=la, lambda_b=lb, team_a=team_a, team_b=team_b)
-
-    final = (outcome.get("data") or {}).get("final_probs", {})
-    pw = final.get(f"{team_a}_win", 0)
-    pd_ = final.get("draw", 0)
-    pl = final.get(f"{team_b}_win", 0)
     markets = (score_dist.get("data") or {}).get("markets", {})
-    top = (score_dist.get("data") or {}).get("top_scores", [])
+    top     = (score_dist.get("data") or {}).get("top_scores", [])
 
     return {
         "success": True,
         "data": {
-            "match": f"{team_a} vs {team_b}",
+            "match":       f"{team_a} vs {team_b}",
             "team_a_stats": team_a_info,
             "team_b_stats": team_b_info,
+            "head_to_head": h2h,
             "prediction": {
-                "outcome_probs": final,
-                "expected_goals": {"lambda_a": la, "lambda_b": lb},
-                "score_distribution": top,
-                "markets": markets,
-                "full_outcome_detail": outcome.get("data"),
+                "outcome_probs":        adjusted_probs,
+                "expected_goals":       {"lambda_a": la, "lambda_b": lb},
+                "score_distribution":   top,
+                "markets":              markets,
+                "h2h_adjustment_pct":   h2h_adj,
+                "full_outcome_detail":  outcome.get("data"),
             },
             "betting_summary": _betting_summary(
-                team_a, team_b, pw, pd_, pl, la, lb, top, markets, elo_a - elo_b
+                team_a, team_b, pw, pd_, pl, la, lb, top, markets,
+                elo_a - elo_b, h2h, rank_a, rank_b,
             ),
         },
     }
