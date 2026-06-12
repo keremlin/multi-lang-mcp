@@ -816,7 +816,7 @@ def WC_schedule(
         date: "today" (default), "YYYY-MM-DD", or any date string.
         league: soccerdata league string (default 'INT-World Cup').
         season: Season year (default '2026').
-        source: 'auto' (default), 'fbref', 'espn', or 'sofascore'.
+        source: 'auto' (default, tries fbref→whoscored→sofascore), 'fbref', 'whoscored', or 'sofascore'.
         all_matches: Return the full season schedule instead of a single date (default false).
 
     Returns each match with home/away teams, kickoff time, venue, group,

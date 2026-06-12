@@ -149,11 +149,11 @@ def _fetch_fbref(league, season, target_date, return_all):
     return matches, None
 
 
-def _fetch_espn(league, season, target_date, return_all):
+def _fetch_whoscored(league, season, target_date, return_all):
     import soccerdata as sd
 
-    espn = sd.ESPN(leagues=[league], seasons=[season])
-    schedule = espn.read_schedule()
+    ws = sd.WhoScored(leagues=[league], seasons=[season])
+    schedule = ws.read_schedule()
     df = schedule.reset_index()
 
     home_col  = _col(df.columns, "home", "team")
@@ -162,11 +162,11 @@ def _fetch_espn(league, season, target_date, return_all):
     as_col    = _col(df.columns, "away", "score") or _col(df.columns, "away", "goal")
     date_col  = _col(df.columns, "date")
     time_col  = _col(df.columns, "time")
-    venue_col = _col(df.columns, "venue") or _col(df.columns, "stadium")
-    group_col = _col(df.columns, "round") or _col(df.columns, "group")
+    venue_col = _col(df.columns, "venue") or _col(df.columns, "stadium") or _col(df.columns, "ground")
+    group_col = _col(df.columns, "round") or _col(df.columns, "group") or _col(df.columns, "stage")
 
     if not home_col or not away_col:
-        return None, f"Unexpected ESPN columns: {list(df.columns)}"
+        return None, f"Unexpected WhoScored columns: {list(df.columns)}"
 
     if not return_all and date_col:
         try:
@@ -230,9 +230,9 @@ def _fetch_sofascore(league, season, target_date, return_all):
 
 
 _SOURCE_MAP = {
-    "fbref":     ("FBref",     _fetch_fbref),
-    "espn":      ("ESPN",      _fetch_espn),
-    "sofascore": ("Sofascore", _fetch_sofascore),
+    "fbref":      ("FBref",      _fetch_fbref),
+    "whoscored":  ("WhoScored",  _fetch_whoscored),
+    "sofascore":  ("Sofascore",  _fetch_sofascore),
 }
 
 
@@ -247,7 +247,7 @@ def fetch_schedule(
 
     # Determine source order
     if source == "auto":
-        order = ["fbref", "espn", "sofascore"]
+        order = ["fbref", "whoscored", "sofascore"]
     elif source in _SOURCE_MAP:
         order = [source]
     else:
