@@ -268,26 +268,27 @@ class MatchApp(ctk.CTk):
         prob_row(5,  "Draw",  pd_, C["draw_bar"])
         prob_row(7,  name_b, pl,  C["team_b"])
 
-        # H2H adjustment note
+        # H2H adjustment note — below all bars, right-aligned small caption
         if h2h_adj and h2h_adj > 0:
-            ctk.CTkLabel(panel, text=f"↳ {h2h_adj}% weight from H2H history",
+            ctk.CTkLabel(panel,
+                         text=f"Probabilities include {h2h_adj}% H2H historical weight",
                          font=ctk.CTkFont("Arial", 10),
                          text_color=C["muted"],
-                         ).grid(row=8, column=0, pady=(0, 4))
+                         ).grid(row=9, column=0, pady=(0, 6))
 
         # Divider
         ctk.CTkFrame(panel, height=1, fg_color=C["border"]).grid(
-            row=9, column=0, sticky="ew", padx=20, pady=(6, 10))
+            row=10, column=0, sticky="ew", padx=20, pady=(2, 10))
 
         # Expected goals
         la = eg.get("lambda_a", 0)
         lb = eg.get("lambda_b", 0)
         ctk.CTkLabel(panel, text="Expected Goals",
                      font=ctk.CTkFont("Arial", 12),
-                     text_color=C["muted"]).grid(row=10, column=0)
+                     text_color=C["muted"]).grid(row=11, column=0)
 
         eg_frame = ctk.CTkFrame(panel, fg_color="transparent")
-        eg_frame.grid(row=11, column=0, pady=(4, 6))
+        eg_frame.grid(row=12, column=0, pady=(4, 6))
         ctk.CTkLabel(eg_frame, text=f"{la:.2f}",
                      font=ctk.CTkFont("Arial", 26, "bold"),
                      text_color=C["team_a"]).grid(row=0, column=0, padx=16)
@@ -304,17 +305,17 @@ class MatchApp(ctk.CTk):
             ctk.CTkLabel(panel, text=verdict,
                          font=ctk.CTkFont("Arial", 11, slant="italic"),
                          text_color=C["gold"],
-                         wraplength=250).grid(row=12, column=0, padx=20, pady=(4, 8))
+                         wraplength=250).grid(row=13, column=0, padx=20, pady=(4, 8))
 
         # ── H2H Section ───────────────────────────────────────────────────
         if h2h and h2h.get("played", 0) >= 1:
             ctk.CTkFrame(panel, height=1, fg_color=C["border"]).grid(
-                row=13, column=0, sticky="ew", padx=20, pady=(6, 8))
+                row=14, column=0, sticky="ew", padx=20, pady=(6, 8))
 
             ctk.CTkLabel(panel, text="HEAD-TO-HEAD",
                          font=ctk.CTkFont("Arial", 13, "bold"),
                          text_color=C["gold"],
-                         ).grid(row=14, column=0, pady=(0, 4))
+                         ).grid(row=15, column=0, pady=(0, 4))
 
             played = h2h["played"]
             wa = h2h.get("team_a_wins", 0)
@@ -323,11 +324,11 @@ class MatchApp(ctk.CTk):
 
             ctk.CTkLabel(panel, text=f"{played} matches played",
                          font=ctk.CTkFont("Arial", 11),
-                         text_color=C["muted"]).grid(row=15, column=0, pady=(0, 6))
+                         text_color=C["muted"]).grid(row=16, column=0, pady=(0, 6))
 
             # H2H bar
             h2h_bar = ctk.CTkFrame(panel, fg_color="transparent")
-            h2h_bar.grid(row=16, column=0, padx=24, sticky="ew", pady=(0, 4))
+            h2h_bar.grid(row=17, column=0, padx=24, sticky="ew", pady=(0, 4))
             h2h_bar.grid_columnconfigure(0, weight=wa if wa else 0)
             h2h_bar.grid_columnconfigure(1, weight=dr if dr else 0)
             h2h_bar.grid_columnconfigure(2, weight=wb if wb else 0)
@@ -344,7 +345,7 @@ class MatchApp(ctk.CTk):
 
             # W/D/L labels
             wdl_frame = ctk.CTkFrame(panel, fg_color="transparent")
-            wdl_frame.grid(row=17, column=0, pady=(4, 2))
+            wdl_frame.grid(row=18, column=0, pady=(4, 2))
             ctk.CTkLabel(wdl_frame, text=f"{wa}W",
                          font=ctk.CTkFont("Arial", 14, "bold"),
                          text_color=C["team_a"]).grid(row=0, column=0, padx=12)
@@ -360,13 +361,13 @@ class MatchApp(ctk.CTk):
             gb = h2h.get("goals_b", 0)
             ctk.CTkLabel(panel, text=f"Goals  {ga} – {gb}",
                          font=ctk.CTkFont("Arial", 12),
-                         text_color=C["muted"]).grid(row=18, column=0, pady=(2, 2))
+                         text_color=C["muted"]).grid(row=19, column=0, pady=(2, 2))
 
             last = h2h.get("last_match")
             if last:
                 ctk.CTkLabel(panel, text=f"Last played: {last}",
                              font=ctk.CTkFont("Arial", 10),
-                             text_color=C["muted"]).grid(row=19, column=0, pady=(0, 14))
+                             text_color=C["muted"]).grid(row=20, column=0, pady=(0, 14))
 
     # ── Top scores ────────────────────────────────────────────────────────
     def _scores_panel(self, parent, name_a, name_b, scores, col):
