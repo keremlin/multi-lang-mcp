@@ -1,5 +1,8 @@
 import argparse
+import functools
+import inspect
 import logging
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -8,6 +11,7 @@ load_dotenv(Path(__file__).parent / ".env")
 from mcp.server.fastmcp import FastMCP
 
 from shared.logging_config import setup_logging
+from shared.activity_log import log_call, log_done
 from shared.powershell_runner import run_powershell
 from shared.python_runner import run_python
 from shared.node_runner import run_node
@@ -19,38 +23,59 @@ logger = logging.getLogger(__name__)
 mcp = FastMCP("multi-lang-mcp")
 
 
-@mcp.tool()
+def mcp_tool():
+    """Drop-in for @mcp.tool() that also writes to logs/activity.log."""
+    def outer(func):
+        sig = inspect.signature(func)
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            bound = sig.bind(*args, **kwargs)
+            bound.apply_defaults()
+            inputs = dict(bound.arguments)
+            log_call(func.__name__, inputs)
+            start = time.perf_counter()
+            result = func(*args, **kwargs)
+            log_done(func.__name__, result, time.perf_counter() - start)
+            return result
+
+        wrapper.__signature__ = sig
+        return mcp.tool()(wrapper)
+    return outer
+
+
+@mcp_tool()
 def windows_services(filter_name: str = "") -> dict:
     """List Windows services, optionally filtered by name."""
     args = [filter_name] if filter_name else []
     return run_powershell("tools/powershell/services.ps1", args)
 
 
-@mcp.tool()
+@mcp_tool()
 def read_file(path: str) -> dict:
     """Read a file from disk and return its contents."""
     return run_python("tools/python/read_file.py", [path])
 
 
-@mcp.tool()
+@mcp_tool()
 def npm_package_info(package_name: str) -> dict:
     """Fetch metadata about an npm package."""
     return run_node("tools/node/npm_info.js", [package_name])
 
 
-@mcp.tool()
+@mcp_tool()
 def java_tool(input_json: str = "{}") -> dict:
     """Run the Java ToolRunner with optional JSON input."""
     return run_java("tools/java/build/ToolRunner.jar", stdin_data=input_json)
 
 
-@mcp.tool()
+@mcp_tool()
 def download_file(url: str, save_path: str) -> dict:
     """Download a file from a URL and save it to disk. Returns progress milestones and final percentage."""
     return run_python("tools/python/download_file.py", [url, save_path], timeout=300)
 
 
-@mcp.tool()
+@mcp_tool()
 def web_search(query: str, max_results: int = 5) -> dict:
     """Search the web using DuckDuckGo and return the top results.
 
@@ -61,7 +86,7 @@ def web_search(query: str, max_results: int = 5) -> dict:
     return run_python("tools/python/web_search.py", [query, str(max_results)], timeout=60)
 
 
-@mcp.tool()
+@mcp_tool()
 def youtube_download(url: str, retries: int = 3, timeout: int = 30, video_format: str = "bestvideo+bestaudio/best", audio_format: str = "", merge_format: str = "") -> dict:
     """Download a YouTube video (or audio-only) to the user's Downloads folder.
 
@@ -80,7 +105,7 @@ def youtube_download(url: str, retries: int = 3, timeout: int = 30, video_format
     )
 
 
-@mcp.tool()
+@mcp_tool()
 def get_clean_webpage(url: str, timeout: int = 15, max_chars: int = 10000) -> dict:
     """Fetch a webpage and return its content as cleaned plain text with all HTML, JS, and boilerplate removed.
 
@@ -96,7 +121,7 @@ def get_clean_webpage(url: str, timeout: int = 15, max_chars: int = 10000) -> di
     )
 
 
-@mcp.tool()
+@mcp_tool()
 def google_tts(
     text: str,
     output_path: str,
@@ -126,7 +151,7 @@ def google_tts(
     return run_python("tools/python/google_tts.py", stdin_data=stdin, timeout=60)
 
 
-@mcp.tool()
+@mcp_tool()
 def groq_stt(
     audio_path: str,
     language_code: str = "en",
@@ -144,7 +169,7 @@ def groq_stt(
     return run_python("tools/python/groq_stt.py", [audio_path, language_code, model], timeout=120)
 
 
-@mcp.tool()
+@mcp_tool()
 def record_audio(
     output_path: str,
     max_seconds: float = 15.0,
@@ -167,7 +192,7 @@ def record_audio(
     )
 
 
-@mcp.tool()
+@mcp_tool()
 def play_audio(audio_path: str) -> dict:
     """Play an audio file (MP3, WAV, OGG, FLAC) through the system speakers without opening a media player window.
     Blocks until playback is complete, then returns.
@@ -178,7 +203,7 @@ def play_audio(audio_path: str) -> dict:
     return run_python("tools/python/play_audio.py", [audio_path], timeout=600)
 
 
-@mcp.tool()
+@mcp_tool()
 def telegram_download(
     channel: str,
     output_dir: str = "",
@@ -208,7 +233,7 @@ def telegram_download(
     return run_python("tools/python/telegram_download.py", stdin_data=stdin, timeout=300)
 
 
-@mcp.tool()
+@mcp_tool()
 def telegram_download_by_ids(
     channel: str,
     message_ids: list,
@@ -235,7 +260,7 @@ def telegram_download_by_ids(
     return run_python("tools/python/telegram_download_by_ids.py", stdin_data=stdin, timeout=7200)
 
 
-@mcp.tool()
+@mcp_tool()
 def telegram_search(
     query: str,
     channel: str = "",
@@ -299,7 +324,7 @@ def telegram_bot_interact(
     })
     return run_python("tools/python/telegram_bot_interact.py", stdin_data=stdin, timeout=120)
 
-@mcp.tool()
+@mcp_tool()
 def telegram_join_channel(invite_link: str) -> dict:
     """Join a Telegram channel or group via @username or a private invite link.
 
@@ -320,7 +345,7 @@ def telegram_join_channel(invite_link: str) -> dict:
     return run_python("tools/python/telegram_join_channel.py", stdin_data=stdin, timeout=60)
 
 
-@mcp.tool()
+@mcp_tool()
 def telegram_forward_message(from_chat: str, message_ids: list, to_chat: str) -> dict:
     """Forward specific messages from one Telegram chat to another.
 
@@ -339,7 +364,7 @@ def telegram_forward_message(from_chat: str, message_ids: list, to_chat: str) ->
     return run_python("tools/python/telegram_forward_message.py", stdin_data=stdin, timeout=60)
 
 
-@mcp.tool()
+@mcp_tool()
 def telegram_leave_channel(channel: str) -> dict:
     """Leave / unsubscribe from a Telegram channel or group.
 
@@ -356,7 +381,7 @@ def telegram_leave_channel(channel: str) -> dict:
     return run_python("tools/python/telegram_leave_channel.py", stdin_data=stdin, timeout=60)
 
 
-@mcp.tool()
+@mcp_tool()
 def telegram_delete_messages(chat: str, message_ids: list) -> dict:
     """Delete specific messages from a Telegram chat.
 
@@ -375,7 +400,7 @@ def telegram_delete_messages(chat: str, message_ids: list) -> dict:
 
 
 
-@mcp.tool()
+@mcp_tool()
 def chroma_list_collections() -> dict:
     """List all collections in the ChromaDB instance.
 
@@ -384,7 +409,7 @@ def chroma_list_collections() -> dict:
     return run_python("tools/python/chroma_list_collections.py", timeout=15)
 
 
-@mcp.tool()
+@mcp_tool()
 def chroma_query(
     collection: str,
     query_text: str,
@@ -411,7 +436,7 @@ def chroma_query(
     return run_python("tools/python/chroma_query.py", stdin_data=_json.dumps(payload), timeout=60)
 
 
-@mcp.tool()
+@mcp_tool()
 def chroma_add_document(
     collection: str,
     documents: str,
@@ -452,7 +477,7 @@ def chroma_add_document(
     return run_python("tools/python/chroma_add_document.py", stdin_data=_json.dumps(payload), timeout=60)
 
 
-@mcp.tool()
+@mcp_tool()
 def chroma_get_document(collection: str, ids: str) -> dict:
     """Fetch documents from a ChromaDB collection by their IDs.
 
@@ -472,7 +497,7 @@ def chroma_get_document(collection: str, ids: str) -> dict:
     return run_python("tools/python/chroma_get_document.py", stdin_data=_json.dumps(payload), timeout=30)
 
 
-@mcp.tool()
+@mcp_tool()
 def bluetooth_enable(state: str) -> dict:
     """Enable or disable the system Bluetooth radio.
 
@@ -482,7 +507,7 @@ def bluetooth_enable(state: str) -> dict:
     return run_powershell("tools/powershell/bluetooth_enable.ps1", [state], timeout=15)
 
 
-@mcp.tool()
+@mcp_tool()
 def bluetooth_scan(timeout_seconds: int = 10) -> dict:
     """Scan for nearby and paired Bluetooth devices (Classic and BLE).
 
@@ -492,7 +517,7 @@ def bluetooth_scan(timeout_seconds: int = 10) -> dict:
     return run_powershell("tools/powershell/bluetooth_scan.ps1", [str(timeout_seconds)], timeout=timeout_seconds + 15)
 
 
-@mcp.tool()
+@mcp_tool()
 def bluetooth_connect(name: str) -> dict:
     """Connect to a paired Bluetooth device by name (full or partial match).
 
@@ -506,7 +531,7 @@ def bluetooth_connect(name: str) -> dict:
     return run_powershell("tools/powershell/bluetooth_connect.ps1", [name], timeout=30)
 
 
-@mcp.tool()
+@mcp_tool()
 def bluetooth_disconnect(name: str) -> dict:
     """Disconnect a Bluetooth device by name (full or partial match).
 
@@ -519,7 +544,7 @@ def bluetooth_disconnect(name: str) -> dict:
     return run_powershell("tools/powershell/bluetooth_disconnect.ps1", [name], timeout=15)
 
 
-@mcp.tool()
+@mcp_tool()
 def youtube_downloader_lg(
     url: str,
     crf: int = 23,
@@ -552,7 +577,7 @@ def youtube_downloader_lg(
     return run_python("tools/python/youtube_downloader_lg.py", stdin_data=stdin, timeout=7200)
 
 
-@mcp.tool()
+@mcp_tool()
 def video_converter_lg(
     input_path: str,
     output_path: str = "",
@@ -584,7 +609,7 @@ def video_converter_lg(
     return run_python("tools/python/video_converter_lg.py", stdin_data=stdin, timeout=3600)
 
 
-@mcp.tool()
+@mcp_tool()
 def google_refresh_token() -> dict:
     """Refresh the Google OAuth2 access token using the stored refresh token.
 
@@ -595,6 +620,43 @@ def google_refresh_token() -> dict:
     Requires env vars: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN.
     """
     return run_python("tools/python/google_refresh_token.py", timeout=30)
+
+
+@mcp_tool()
+def activity_log_query(
+    date: str = "",
+    tool: str = "",
+    status: str = "",
+    search: str = "",
+    tail: int = 0,
+    summary: bool = False,
+) -> dict:
+    """Query the MCP activity log — who called what, when, and with what result.
+
+    All parameters are optional and combinable.
+
+    Args:
+        date: Date filter — "today", "yesterday", "YYYY-MM-DD", or a range
+              "YYYY-MM-DD/YYYY-MM-DD". Leave empty for all dates.
+        tool: Partial tool name filter, case-insensitive (e.g. "telegram" matches
+              telegram_download, telegram_search, etc.).
+        status: "ok" for successful calls, "fail" for errors, "incomplete" for
+                calls with no matching DONE line. Leave empty for all.
+        search: Free-text substring searched in inputs and output (case-insensitive).
+        tail: Return only the last N entries after all other filters (0 = unlimited).
+        summary: When true, return per-tool counts (total/ok/fail/avg_duration_ms)
+                 instead of individual entries — useful for a quick usage overview.
+    """
+    import json as _json
+    stdin = _json.dumps({
+        "date": date,
+        "tool": tool,
+        "status": status,
+        "search": search,
+        "tail": tail,
+        "summary": summary,
+    })
+    return run_python("tools/python/activity_log_query.py", stdin_data=stdin, timeout=15)
 
 
 def _parse_args() -> argparse.Namespace:

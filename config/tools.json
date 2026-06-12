@@ -216,6 +216,13 @@
       "script": "tools/python/youtube_downloader_lg.py",
       "description": "Download a YouTube video and encode it directly to LG TV-compatible MP4 (H.264, AAC, max 1920×1080) in one step",
       "timeout": 7200
+    },
+    {
+      "name": "activity_log_query",
+      "runtime": "python",
+      "script": "tools/python/activity_log_query.py",
+      "description": "Query the MCP activity log by date, tool name, status, or free-text search",
+      "timeout": 15
     }
   ]
 }
