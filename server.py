@@ -901,6 +901,25 @@ def WC_team_sync(
 
 
 @mcp_tool()
+def WC_stats_sync(
+    mode: str = "all",
+    team: str = "",
+) -> dict:
+    """Enrich team stats and head-to-head data from live sources.
+
+    Pulls FIFA rankings from api.fifa.com and recent form + goals from
+    football-data.org, then stores everything in Supabase.
+
+    Args:
+        mode: What to sync — "all" | "rankings" | "form" | "h2h"
+        team: Single team name to update (empty = all 48 teams)
+    """
+    import json as _json
+    stdin = _json.dumps({"mode": mode, "team": team})
+    return run_python("tools/python/wc_stats_sync.py", stdin_data=stdin, timeout=600)
+
+
+@mcp_tool()
 def WC_analyze_match(
     team_a: str,
     team_b: str,

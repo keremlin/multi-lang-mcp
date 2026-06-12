@@ -293,6 +293,13 @@
       "script": "tools/python/wc_team_sync.py",
       "description": "Update team Elo and form stats in Supabase wc_team_stats from FBref (with short timeout)",
       "timeout": 120
+    },
+    {
+      "name": "WC_stats_sync",
+      "runtime": "python",
+      "script": "tools/python/wc_stats_sync.py",
+      "description": "Enrich wc_team_stats with FIFA rankings, recent form/goals, and populate wc_head_to_head from football-data.org",
+      "timeout": 600
     }
   ]
 }
