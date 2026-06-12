@@ -71,6 +71,17 @@ _ELO_FALLBACK = {
     "curaçao": 1581, "haiti": 1602, "new zealand": 1601,
 }
 
+# Common name aliases → canonical key in _ELO_FALLBACK
+_TEAM_ALIASES = {
+    "usa": "united states", "us": "united states", "usmnt": "united states",
+    "uae": "united arab emirates", "drc": "congo dr",
+    "ivory coast": "ivory coast", "côte d'ivoire": "ivory coast",
+    "republic of ireland": "ireland", "northern ireland": "ireland",
+    "czech republic": "czechia",
+    "south korea": "south korea", "korea republic": "south korea",
+    "bosnia": "bosnia-herzegovina",
+}
+
 
 def _get_team_from_db(team_name: str) -> dict | None:
     """Fetch one team's stats row from Supabase."""
@@ -90,7 +101,9 @@ def _resolve_elo(team_name: str, db_row: dict | None, override: float) -> tuple[
         return float(override), "manual override"
     if db_row and db_row.get("elo"):
         return float(db_row["elo"]), "supabase"
-    fallback = _ELO_FALLBACK.get(team_name.lower().strip())
+    key = team_name.lower().strip()
+    canonical = _TEAM_ALIASES.get(key, key)
+    fallback = _ELO_FALLBACK.get(canonical)
     if fallback:
         return float(fallback), "fallback table"
     return None, "unavailable"
