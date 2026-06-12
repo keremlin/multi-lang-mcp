@@ -37,31 +37,30 @@ C = {
     "loss_bar": "#8b1a1a",
 }
 
-FLAGS = {
-    "United States": "🇺🇸", "USA": "🇺🇸",
-    "Brazil": "🇧🇷", "Argentina": "🇦🇷", "France": "🇫🇷",
-    "Germany": "🇩🇪", "Spain": "🇪🇸", "England": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-    "Portugal": "🇵🇹", "Netherlands": "🇳🇱", "Belgium": "🇧🇪",
-    "Croatia": "🇭🇷", "Uruguay": "🇺🇾", "Colombia": "🇨🇴",
-    "Mexico": "🇲🇽", "Canada": "🇨🇦", "Japan": "🇯🇵",
-    "South Korea": "🇰🇷", "Morocco": "🇲🇦", "Senegal": "🇸🇳",
-    "Switzerland": "🇨🇭", "Austria": "🇦🇹", "Norway": "🇳🇴",
-    "Sweden": "🇸🇪", "Denmark": "🇩🇰", "Poland": "🇵🇱",
-    "Australia": "🇦🇺", "Iran": "🇮🇷", "Turkey": "🇹🇷",
-    "Ecuador": "🇪🇨", "Paraguay": "🇵🇾", "Chile": "🇨🇱",
-    "Ghana": "🇬🇭", "Nigeria": "🇳🇬", "Egypt": "🇪🇬",
-    "Tunisia": "🇹🇳", "Algeria": "🇩🇿",
-    "Saudi Arabia": "🇸🇦", "Qatar": "🇶🇦", "Iraq": "🇮🇶",
-    "Jordan": "🇯🇴", "South Africa": "🇿🇦", "Scotland": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
-    "Czechia": "🇨🇿", "Bosnia-Herzegovina": "🇧🇦",
-    "Panama": "🇵🇦", "New Zealand": "🇳🇿", "Haiti": "🇭🇹",
-    "Ivory Coast": "🇨🇮", "Uzbekistan": "🇺🇿",
-    "Congo DR": "🇨🇩", "Cape Verde Islands": "🇨🇻", "Curaçao": "🇨🇼",
+# 2-letter badge code for each team (shown as styled jersey badge)
+TEAM_CODE = {
+    "Argentina": "AR", "Australia": "AU", "Austria": "AT",
+    "Belgium": "BE", "Bosnia-Herzegovina": "BA", "Brazil": "BR",
+    "Canada": "CA", "Cape Verde Islands": "CV", "Ivory Coast": "CI",
+    "Colombia": "CO", "Congo DR": "CD", "Croatia": "HR",
+    "Czechia": "CZ", "Curaçao": "CW", "Ecuador": "EC",
+    "Egypt": "EG", "England": "EN", "France": "FR",
+    "Germany": "DE", "Ghana": "GH", "Haiti": "HT",
+    "Iran": "IR", "Iraq": "IQ", "Japan": "JP",
+    "Jordan": "JO", "Mexico": "MX", "Morocco": "MA",
+    "Netherlands": "NL", "New Zealand": "NZ", "Norway": "NO",
+    "Panama": "PA", "Paraguay": "PY", "Portugal": "PT",
+    "Qatar": "QA", "Saudi Arabia": "SA", "Scotland": "SC",
+    "Senegal": "SN", "South Africa": "ZA", "South Korea": "KR",
+    "Spain": "ES", "Sweden": "SE", "Switzerland": "CH",
+    "Tunisia": "TN", "Turkey": "TR", "United States": "US",
+    "Uruguay": "UY", "Uzbekistan": "UZ", "Algeria": "DZ",
+    "USA": "US",
 }
 
 
-def flag(team: str) -> str:
-    return FLAGS.get(team, "⚽")
+def team_code(name: str) -> str:
+    return TEAM_CODE.get(name, name[:2].upper())
 
 
 def form_dot(ch: str) -> tuple[str, str]:
@@ -149,10 +148,17 @@ class MatchApp(ctk.CTk):
         card.grid(row=0, column=col, sticky="nsew", padx=12, pady=8)
         card.grid_columnconfigure(0, weight=1)
 
-        # Flag + name
-        ctk.CTkLabel(card, text=flag(name),
-                     font=ctk.CTkFont("Segoe UI Emoji", 52),
-                     ).grid(row=0, column=0, pady=(24, 4))
+        # Jersey badge (2-letter country code in a styled rounded box)
+        badge_frame = ctk.CTkFrame(card, fg_color=accent, corner_radius=14,
+                                   width=90, height=90)
+        badge_frame.grid(row=0, column=0, pady=(24, 6))
+        badge_frame.grid_propagate(False)
+        badge_frame.grid_columnconfigure(0, weight=1)
+        badge_frame.grid_rowconfigure(0, weight=1)
+        ctk.CTkLabel(badge_frame, text=team_code(name),
+                     font=ctk.CTkFont("Arial", 34, "bold"),
+                     text_color="#ffffff",
+                     ).grid(row=0, column=0)
 
         ctk.CTkLabel(card, text=name,
                      font=ctk.CTkFont("Arial", 24, "bold"),
