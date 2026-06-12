@@ -270,8 +270,15 @@
       "name": "WC_schedule",
       "runtime": "python",
       "script": "tools/python/wc_schedule.py",
-      "description": "Fetch World Cup fixtures and results for a given date (default: today) from soccerdata — FBref, ESPN, or Sofascore",
-      "timeout": 120
+      "description": "Fetch World Cup fixtures and results for a given date — reads from Supabase DB (fast), falls back to soccerdata scraping",
+      "timeout": 30
+    },
+    {
+      "name": "WC_db_sync",
+      "runtime": "python",
+      "script": "tools/python/wc_db_sync.py",
+      "description": "Seed or refresh the Supabase wc_matches table from football-data.org or TheSportsDB",
+      "timeout": 60
     }
   ]
 }

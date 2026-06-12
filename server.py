@@ -808,15 +808,16 @@ def WC_schedule(
     source: str = "auto",
     all_matches: bool = False,
 ) -> dict:
-    """Fetch World Cup fixtures and results for a given date from soccerdata.
+    """Fetch World Cup fixtures and results for a given date.
 
-    Tries FBref → ESPN → Sofascore automatically and returns whichever works.
+    Reads from Supabase DB (fast, <1s). Falls back to soccerdata scraping if DB is empty.
+    Run WC_db_sync first to populate the DB.
 
     Args:
         date: "today" (default), "YYYY-MM-DD", or any date string.
-        league: soccerdata league string (default 'INT-World Cup').
+        league: soccerdata league string used for scrape fallback (default 'INT-World Cup').
         season: Season year (default '2026').
-        source: 'auto' (default, tries fbref→whoscored→sofascore), 'fbref', 'whoscored', or 'sofascore'.
+        source: 'auto' (default, DB first), 'db' (DB only), or 'scrape' (force scraping).
         all_matches: Return the full season schedule instead of a single date (default false).
 
     Returns each match with home/away teams, kickoff time, venue, group,
@@ -830,7 +831,27 @@ def WC_schedule(
         "source": source,
         "all": all_matches,
     })
-    return run_python("tools/python/wc_schedule.py", stdin_data=stdin, timeout=120)
+    return run_python("tools/python/wc_schedule.py", stdin_data=stdin, timeout=30)
+
+
+@mcp_tool()
+def WC_db_sync(
+    source: str = "auto",
+    force: bool = False,
+) -> dict:
+    """Seed or refresh the Supabase wc_matches table from a football data API.
+
+    Run this once before using WC_schedule to populate the DB with all WC 2026 fixtures.
+    Subsequent WC_schedule calls will be instant (reads from DB, no scraping).
+
+    Args:
+        source: 'auto' (default), 'football-data' (needs FOOTBALL_DATA_API_KEY in .env),
+                or 'thesportsdb' (free, no key needed).
+        force: Re-sync even if data already exists in the DB (default false).
+    """
+    import json as _json
+    stdin = _json.dumps({"source": source, "force": force})
+    return run_python("tools/python/wc_db_sync.py", stdin_data=stdin, timeout=60)
 
 
 @mcp_tool()
