@@ -300,6 +300,27 @@
       "script": "tools/python/wc_stats_sync.py",
       "description": "Enrich wc_team_stats with FIFA rankings, recent form/goals, and populate wc_head_to_head from football-data.org",
       "timeout": 600
+    },
+    {
+      "name": "WC_players_sync",
+      "runtime": "python",
+      "script": "tools/python/wc_players_sync.py",
+      "description": "Sync WC 2026 squad rosters (name, position, club, league) into wc_players table from football-data.org",
+      "timeout": 900
+    },
+    {
+      "name": "WC_news_sync",
+      "runtime": "python",
+      "script": "tools/python/wc_news_sync.py",
+      "description": "Fetch recent news about WC 2026 teams from Google News RSS and store in wc_team_news table",
+      "timeout": 300
+    },
+    {
+      "name": "WC_ratings_sync",
+      "runtime": "python",
+      "script": "tools/python/wc_ratings_sync.py",
+      "description": "Fetch EA FC / FIFA player ratings (overall + PAC/SHO/PAS/DRI/DEF/PHY) from sofifa.com for WC squad players",
+      "timeout": 1800
     }
   ]
 }

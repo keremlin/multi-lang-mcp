@@ -961,6 +961,64 @@ def WC_analyze_match(
     return run_python("tools/python/wc_analyze_match.py", stdin_data=_json.dumps(payload), timeout=300)
 
 
+@mcp_tool()
+def WC_players_sync(
+    mode: str = "all",
+    team: str = "",
+) -> dict:
+    """Sync WC 2026 squad rosters into the wc_players table.
+
+    Fetches player name, position, shirt number, and optionally current club
+    and league from football-data.org. Run once to seed; re-run to refresh.
+
+    Args:
+        mode: "squads" | "clubs" | "photos" (TheSportsDB headshots) | "all"
+        team: Single team name to update (empty = all 48 teams)
+    """
+    import json as _json
+    stdin = _json.dumps({"mode": mode, "team": team})
+    return run_python("tools/python/wc_players_sync.py", stdin_data=stdin, timeout=900)
+
+
+@mcp_tool()
+def WC_news_sync(
+    team: str = "",
+    days: int = 10,
+) -> dict:
+    """Fetch recent WC 2026 team news from Google News RSS into wc_team_news.
+
+    Searches Google News for each team name + 'World Cup 2026', stores
+    headline, summary, source and publish date. Safe to re-run — upserts by URL.
+
+    Args:
+        team: Single team name to update (empty = all 48 teams).
+        days: How many days back to include (default 10).
+    """
+    import json as _json
+    stdin = _json.dumps({"team": team, "days": days})
+    return run_python("tools/python/wc_news_sync.py", stdin_data=stdin, timeout=300)
+
+
+@mcp_tool()
+def WC_ratings_sync(
+    team: str = "",
+    force: bool = False,
+) -> dict:
+    """Fetch EA FC player ratings from sofifa.com for WC 2026 squad players.
+
+    Scrapes sofifa.com player search by name and stores overall rating plus
+    the 6 key attributes: pace, shooting, passing, dribbling, defending, physical.
+    Skips players that already have a rating unless force=true.
+
+    Args:
+        team: Single team name to update (empty = all 48 teams).
+        force: Re-fetch even if rating already exists (default false).
+    """
+    import json as _json
+    stdin = _json.dumps({"team": team, "force": force})
+    return run_python("tools/python/wc_ratings_sync.py", stdin_data=stdin, timeout=1800)
+
+
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Multi-language MCP server")
     p.add_argument(

@@ -41,3 +41,4 @@ doc/
 .pytest_cache/
 .coverage
 htmlcov/
+flags_cache/

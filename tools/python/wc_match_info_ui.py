@@ -63,18 +63,29 @@ def main():
     json.dump(result, tmp, ensure_ascii=False)
     tmp.close()
 
-    # Spawn UI window as detached process (returns instantly)
     python_exe = sys.executable
-    ui_script  = str(_ROOT / "tools" / "python" / "wc_ui_window.py")
+    flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
 
+    # Spawn UI window as detached process (returns instantly)
+    ui_script = str(_ROOT / "tools" / "python" / "wc_ui_window.py")
     subprocess.Popen(
         [python_exe, ui_script, "--data", tmp.name],
-        creationflags=(
-            subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-        ),
-        close_fds=True,
-        cwd=str(_ROOT),
+        creationflags=flags, close_fds=True, cwd=str(_ROOT),
     )
+
+    # Background: enrich club data for both teams (skips players that already have it)
+    root_str = str(_ROOT).replace("\\", "\\\\")
+    for team in (team_a, team_b):
+        team_escaped = team.replace("'", "\\'")
+        subprocess.Popen(
+            [python_exe, "-c",
+             f"import sys; sys.path.insert(0, r'{root_str}'); "
+             f"from dotenv import load_dotenv; from pathlib import Path; "
+             f"load_dotenv(Path(r'{root_str}') / '.env'); "
+             f"from tools.python.wc_players_sync import run_sync; "
+             f"run_sync('clubs', '{team_escaped}')"],
+            creationflags=flags, close_fds=True, cwd=str(_ROOT),
+        )
 
     # Return summary immediately
     d = result.get("data", {})
