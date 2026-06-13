@@ -906,6 +906,38 @@ Data backend: **Supabase** — 72 group stage matches seeded from football-data.
 
 ---
 
+## How AI Should Update Data
+
+### Update trigger reference
+
+| When | Tool | What it updates | Duration |
+|---|---|---|---|
+| Before showing match UI | `WC_match_info_ui` | Opens window (triggers background club sync automatically) | < 5 s |
+| After each match day | `WC_db_sync` | Match scores and status in `wc_matches` | < 60 s |
+| After each match day | `WC_news_sync` | Latest team news in `wc_team_news` | < 60 s |
+| After each match day | `WC_team_sync` | Team Elo + form stats in `wc_team_stats` | < 2 min |
+| After group stage squads finalised | `WC_players_sync` (mode: squads) | Roster updates — substitutions, late call-ups | ~15 min |
+| One-time / weekly | `WC_ratings_sync` | Player market values + overall ratings | ~45 min |
+| One-time / weekly | `WC_players_sync` (mode: photos) | Player headshot URLs | ~1 min/team |
+
+### Minimum refresh after each match day
+
+Call these three tools in order — each is safe to re-run:
+
+```
+WC_db_sync({})           ← scores and match status
+WC_team_sync({})         ← updated form strings and Elo
+WC_news_sync({})         ← match reaction and injury news
+```
+
+Then open any match window:
+
+```
+WC_match_info_ui({"team_a": "...", "team_b": "..."})
+```
+
+---
+
 ## AI Instructions — How to Update Data and Show UI
 
 This section tells Claude (or any AI using these tools) exactly which tools to call and in what order for common tasks.
