@@ -861,6 +861,8 @@ def WC_match_info_ui(
     elo_a: float = 0,
     elo_b: float = 0,
     home_advantage: float = 0,
+    summary_a: str = "",
+    summary_b: str = "",
 ) -> dict:
     """Open a maximized match prediction window for two World Cup teams.
 
@@ -874,12 +876,16 @@ def WC_match_info_ui(
         elo_a: Override Elo for team A (0 = use DB value).
         elo_b: Override Elo for team B (0 = use DB value).
         home_advantage: Elo bonus for team A if playing at home (default 0).
+        summary_a: AI-generated 2-3 sentence tactical summary for team_a (optional).
+        summary_b: AI-generated 2-3 sentence tactical summary for team_b (optional).
     """
     import json as _json
     stdin = _json.dumps({
         "team_a": team_a, "team_b": team_b,
         "elo_a": elo_a, "elo_b": elo_b,
         "home_advantage": home_advantage,
+        "summary_a": summary_a,
+        "summary_b": summary_b,
     })
     return run_python("tools/python/wc_match_info_ui.py", stdin_data=stdin, timeout=30)
 

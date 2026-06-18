@@ -36,8 +36,10 @@ def main():
         print(json.dumps({"success": False, "error": f"Invalid JSON: {e}"}))
         sys.exit(1)
 
-    team_a = p.get("team_a", "").strip()
-    team_b = p.get("team_b", "").strip()
+    team_a    = p.get("team_a", "").strip()
+    team_b    = p.get("team_b", "").strip()
+    summary_a = p.get("summary_a", "").strip()
+    summary_b = p.get("summary_b", "").strip()
     if not team_a or not team_b:
         print(json.dumps({"success": False, "error": "'team_a' and 'team_b' are required"}))
         sys.exit(1)
@@ -54,6 +56,13 @@ def main():
     if not result.get("success"):
         print(json.dumps(result))
         sys.exit(1)
+
+    # Inject AI-generated summaries if provided
+    if summary_a or summary_b:
+        result.setdefault("data", {})["summaries"] = {
+            "team_a": summary_a,
+            "team_b": summary_b,
+        }
 
     # Write data to a temp file that the UI window will read
     tmp = tempfile.NamedTemporaryFile(

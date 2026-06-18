@@ -180,34 +180,14 @@ class MatchApp(ctk.CTk):
 
         # ── ROOT GRID ─────────────────────────────────────────────────────
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(0, weight=0)  # header
-        self.grid_rowconfigure(1, weight=3)  # main
-        self.grid_rowconfigure(2, weight=1)  # footer
-        self.grid_rowconfigure(3, weight=1)  # news
-        self.grid_rowconfigure(4, weight=2)  # squad
-
-        # ── HEADER ────────────────────────────────────────────────────────
-        header = ctk.CTkFrame(self, fg_color=C["card"], corner_radius=0)
-        header.grid(row=0, column=0, sticky="ew")
-        header.grid_columnconfigure(0, weight=1)
-
-        ctk.CTkLabel(
-            header, text="🏆  FIFA WORLD CUP 2026",
-            font=ctk.CTkFont("Arial", 22, "bold"),
-            text_color=C["gold"],
-        ).grid(row=0, column=0, pady=(14, 2))
-
-        group_a = ta.get("group", "")
-        group_str = f"GROUP {group_a.replace('GROUP_', '')}" if group_a else ""
-        ctk.CTkLabel(
-            header, text=group_str,
-            font=ctk.CTkFont("Arial", 13),
-            text_color=C["muted"],
-        ).grid(row=1, column=0, pady=(0, 12))
+        self.grid_rowconfigure(0, weight=3)  # main
+        self.grid_rowconfigure(1, weight=1)  # footer
+        self.grid_rowconfigure(2, weight=1)  # news
+        self.grid_rowconfigure(3, weight=1)  # wc 2026 results
 
         # ── MAIN ──────────────────────────────────────────────────────────
         main = ctk.CTkFrame(self, fg_color=C["bg"], corner_radius=0)
-        main.grid(row=1, column=0, sticky="nsew", padx=20, pady=(10, 5))
+        main.grid(row=0, column=0, sticky="nsew", padx=20, pady=(10, 5))
         main.grid_columnconfigure(0, weight=2)
         main.grid_columnconfigure(1, weight=3)
         main.grid_columnconfigure(2, weight=2)
@@ -215,13 +195,15 @@ class MatchApp(ctk.CTk):
 
         self._team_card(main, ta, name_a, C["team_a"], C["card_a"],
                         eg.get("lambda_a"), col=0)
-        self._center_panel(main, name_a, name_b, probs, eg, detail, h2h, h2h_adj, col=1)
+        group_a = ta.get("group", "")
+        self._center_panel(main, name_a, name_b, probs, eg, detail, h2h, h2h_adj,
+                           group=group_a, col=1)
         self._team_card(main, tb, name_b, C["team_b"], C["card_b"],
                         eg.get("lambda_b"), col=2)
 
         # ── FOOTER ────────────────────────────────────────────────────────
         footer = ctk.CTkFrame(self, fg_color=C["card"], corner_radius=0)
-        footer.grid(row=2, column=0, sticky="ew")
+        footer.grid(row=1, column=0, sticky="ew")
         footer.grid_columnconfigure(0, weight=1)
         footer.grid_columnconfigure(1, weight=1)
 
@@ -230,19 +212,21 @@ class MatchApp(ctk.CTk):
 
         # ── NEWS SECTION ──────────────────────────────────────────────────
         news_frame = ctk.CTkFrame(self, fg_color=C["bg"], corner_radius=0)
-        news_frame.grid(row=3, column=0, sticky="ew", padx=20, pady=(0, 4))
+        news_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=(0, 4))
         news_frame.grid_columnconfigure(0, weight=1)
         news_frame.grid_columnconfigure(1, weight=1)
         self._news_panel(news_frame, name_a, C["team_a"], col=0)
         self._news_panel(news_frame, name_b, C["team_b"], col=1)
 
-        # ── SQUAD SECTION ─────────────────────────────────────────────────
-        squad_frame = ctk.CTkFrame(self, fg_color=C["bg"], corner_radius=0)
-        squad_frame.grid(row=4, column=0, sticky="ew", padx=20, pady=(0, 12))
-        squad_frame.grid_columnconfigure(0, weight=1)
-        squad_frame.grid_columnconfigure(1, weight=1)
-        self._squad_panel(squad_frame, name_a, C["team_a"], col=0)
-        self._squad_panel(squad_frame, name_b, C["team_b"], col=1)
+        # ── WC 2026 RESULTS ───────────────────────────────────────────────
+        summaries = d.get("summaries", {})
+        summary_a = summaries.get("team_a", "")
+        summary_b = summaries.get("team_b", "")
+
+        results_frame = ctk.CTkFrame(self, fg_color=C["bg"], corner_radius=0)
+        results_frame.grid(row=3, column=0, sticky="ew", padx=20, pady=(0, 12))
+        results_frame.grid_columnconfigure(0, weight=1)
+        self._results_panel(results_frame, name_a, name_b, summary_a, summary_b)
 
     # ── Team card ─────────────────────────────────────────────────────────
     def _team_card(self, parent, stats, name, accent, bg, lam, col):
@@ -332,25 +316,31 @@ class MatchApp(ctk.CTk):
 
     # ── Center prediction panel ────────────────────────────────────────────
     def _center_panel(self, parent, name_a, name_b, probs, eg, detail,
-                      h2h, h2h_adj, col):
+                      h2h, h2h_adj, group, col):
         panel = ctk.CTkFrame(parent, fg_color=C["card"], corner_radius=16)
         panel.grid(row=0, column=col, sticky="nsew", padx=8, pady=8)
         panel.grid_columnconfigure(0, weight=1)
 
+        group_str = f"GROUP {group.replace('GROUP_', '')}" if group else ""
+        ctk.CTkLabel(panel, text=f"🏆  FIFA WORLD CUP 2026{('  ·  ' + group_str) if group_str else ''}",
+                     font=ctk.CTkFont("Arial", 13, "bold"),
+                     text_color=C["gold"],
+                     ).grid(row=0, column=0, pady=(14, 2))
+
         ctk.CTkLabel(panel, text="PREDICTION",
                      font=ctk.CTkFont("Arial", 16, "bold"),
-                     text_color=C["gold"],
-                     ).grid(row=0, column=0, pady=(20, 4))
+                     text_color=C["text"],
+                     ).grid(row=1, column=0, pady=(6, 4))
 
         ctk.CTkLabel(panel, text="Win Probability",
                      font=ctk.CTkFont("Arial", 12),
                      text_color=C["muted"],
-                     ).grid(row=1, column=0, pady=(0, 10))
+                     ).grid(row=2, column=0, pady=(0, 10))
 
         ctk.CTkLabel(panel, text="VS",
                      font=ctk.CTkFont("Arial", 34, "bold"),
                      text_color=C["muted"],
-                     ).grid(row=2, column=0, pady=(0, 12))
+                     ).grid(row=3, column=0, pady=(0, 12))
 
         pw  = probs.get(f"{name_a}_win", 0)
         pd_ = probs.get("draw", 0)
@@ -371,31 +361,31 @@ class MatchApp(ctk.CTk):
                          font=ctk.CTkFont("Arial", 13, "bold"),
                          text_color=C["text"]).grid(row=0, column=1, padx=(8, 0))
 
-        prob_row(3,  name_a, pw,  C["team_a"])
-        prob_row(5,  "Draw",  pd_, C["draw_bar"])
-        prob_row(7,  name_b, pl,  C["team_b"])
+        prob_row(4,  name_a, pw,  C["team_a"])
+        prob_row(6,  "Draw",  pd_, C["draw_bar"])
+        prob_row(8,  name_b, pl,  C["team_b"])
 
-        # H2H adjustment note — below all bars, right-aligned small caption
+        # H2H adjustment note
         if h2h_adj and h2h_adj > 0:
             ctk.CTkLabel(panel,
                          text=f"Probabilities include {h2h_adj}% H2H historical weight",
                          font=ctk.CTkFont("Arial", 10),
                          text_color=C["muted"],
-                         ).grid(row=9, column=0, pady=(0, 6))
+                         ).grid(row=10, column=0, pady=(0, 6))
 
         # Divider
         ctk.CTkFrame(panel, height=1, fg_color=C["border"]).grid(
-            row=10, column=0, sticky="ew", padx=20, pady=(2, 10))
+            row=11, column=0, sticky="ew", padx=20, pady=(2, 10))
 
         # Expected goals
         la = eg.get("lambda_a", 0)
         lb = eg.get("lambda_b", 0)
         ctk.CTkLabel(panel, text="Expected Goals",
                      font=ctk.CTkFont("Arial", 12),
-                     text_color=C["muted"]).grid(row=11, column=0)
+                     text_color=C["muted"]).grid(row=12, column=0)
 
         eg_frame = ctk.CTkFrame(panel, fg_color="transparent")
-        eg_frame.grid(row=12, column=0, pady=(4, 6))
+        eg_frame.grid(row=13, column=0, pady=(4, 6))
         ctk.CTkLabel(eg_frame, text=f"{la:.2f}",
                      font=ctk.CTkFont("Arial", 26, "bold"),
                      text_color=C["team_a"]).grid(row=0, column=0, padx=16)
@@ -412,17 +402,17 @@ class MatchApp(ctk.CTk):
             ctk.CTkLabel(panel, text=verdict,
                          font=ctk.CTkFont("Arial", 11, slant="italic"),
                          text_color=C["gold"],
-                         wraplength=250).grid(row=13, column=0, padx=20, pady=(4, 8))
+                         wraplength=250).grid(row=14, column=0, padx=20, pady=(4, 8))
 
         # ── H2H Section ───────────────────────────────────────────────────
         if h2h and h2h.get("played", 0) >= 1:
             ctk.CTkFrame(panel, height=1, fg_color=C["border"]).grid(
-                row=14, column=0, sticky="ew", padx=20, pady=(6, 8))
+                row=15, column=0, sticky="ew", padx=20, pady=(6, 8))
 
             ctk.CTkLabel(panel, text="HEAD-TO-HEAD",
                          font=ctk.CTkFont("Arial", 13, "bold"),
                          text_color=C["gold"],
-                         ).grid(row=15, column=0, pady=(0, 4))
+                         ).grid(row=16, column=0, pady=(0, 4))
 
             played = h2h["played"]
             wa = h2h.get("team_a_wins", 0)
@@ -431,11 +421,11 @@ class MatchApp(ctk.CTk):
 
             ctk.CTkLabel(panel, text=f"{played} matches played",
                          font=ctk.CTkFont("Arial", 11),
-                         text_color=C["muted"]).grid(row=16, column=0, pady=(0, 6))
+                         text_color=C["muted"]).grid(row=17, column=0, pady=(0, 6))
 
             # H2H bar
             h2h_bar = ctk.CTkFrame(panel, fg_color="transparent")
-            h2h_bar.grid(row=17, column=0, padx=24, sticky="ew", pady=(0, 4))
+            h2h_bar.grid(row=18, column=0, padx=24, sticky="ew", pady=(0, 4))
             h2h_bar.grid_columnconfigure(0, weight=wa if wa else 0)
             h2h_bar.grid_columnconfigure(1, weight=dr if dr else 0)
             h2h_bar.grid_columnconfigure(2, weight=wb if wb else 0)
@@ -452,7 +442,7 @@ class MatchApp(ctk.CTk):
 
             # W/D/L labels
             wdl_frame = ctk.CTkFrame(panel, fg_color="transparent")
-            wdl_frame.grid(row=18, column=0, pady=(4, 2))
+            wdl_frame.grid(row=19, column=0, pady=(4, 2))
             ctk.CTkLabel(wdl_frame, text=f"{wa}W",
                          font=ctk.CTkFont("Arial", 14, "bold"),
                          text_color=C["team_a"]).grid(row=0, column=0, padx=12)
@@ -468,19 +458,20 @@ class MatchApp(ctk.CTk):
             gb = h2h.get("goals_b", 0)
             ctk.CTkLabel(panel, text=f"Goals  {ga} – {gb}",
                          font=ctk.CTkFont("Arial", 12),
-                         text_color=C["muted"]).grid(row=19, column=0, pady=(2, 2))
+                         text_color=C["muted"]).grid(row=20, column=0, pady=(2, 2))
 
             last = h2h.get("last_match")
             if last:
                 ctk.CTkLabel(panel, text=f"Last played: {last}",
                              font=ctk.CTkFont("Arial", 10),
-                             text_color=C["muted"]).grid(row=20, column=0, pady=(0, 14))
+                             text_color=C["muted"]).grid(row=21, column=0, pady=(0, 14))
 
     # ── Top scores ────────────────────────────────────────────────────────
     def _scores_panel(self, parent, name_a, name_b, scores, col):
         panel = ctk.CTkFrame(parent, fg_color="transparent")
         panel.grid(row=0, column=col, sticky="nsew", padx=20, pady=12)
         panel.grid_columnconfigure(0, weight=1)
+        panel.grid_rowconfigure(2, weight=1)
 
         ctk.CTkLabel(panel, text="⚽  Top Probable Scores",
                      font=ctk.CTkFont("Arial", 14, "bold"),
@@ -501,12 +492,15 @@ class MatchApp(ctk.CTk):
                      font=ctk.CTkFont("Arial", 11),
                      text_color=C["muted"], width=80, anchor="center").grid(row=0, column=3)
 
-        for i, s in enumerate(scores[:6]):
+        scroll = ctk.CTkScrollableFrame(panel, fg_color="transparent", height=140)
+        scroll.grid(row=2, column=0, sticky="ew")
+
+        for i, s in enumerate(scores):
             sc = s.get("score", "")
             pct = s.get("probability_pct", 0)
             parts = sc.split("-") if "-" in sc else ["?", "?"]
-            rf = ctk.CTkFrame(panel, fg_color="transparent")
-            rf.grid(row=i+2, column=0, sticky="ew", pady=1)
+            rf = ctk.CTkFrame(scroll, fg_color="transparent")
+            rf.grid(row=i, column=0, sticky="ew", pady=1)
             ctk.CTkLabel(rf, text=parts[0],
                          font=ctk.CTkFont("Arial", 15, "bold"),
                          text_color=C["team_a"], width=80, anchor="center").grid(row=0, column=0)
@@ -561,7 +555,7 @@ class MatchApp(ctk.CTk):
             db = SupabaseClient()
             rows = db.select("wc_team_news", filters={"team": team_name})
             rows.sort(key=lambda r: r.get("published_at") or "", reverse=True)
-            news = rows[:5]
+            news = rows[:20]
         except Exception:
             news = []
 
@@ -581,9 +575,13 @@ class MatchApp(ctk.CTk):
                                                      padx=16, pady=(0, 8))
             return
 
+        scroll = ctk.CTkScrollableFrame(outer, fg_color="transparent", height=120)
+        scroll.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 8))
+        scroll.grid_columnconfigure(0, weight=1)
+
         for i, item in enumerate(news):
-            nf = ctk.CTkFrame(outer, fg_color="transparent")
-            nf.grid(row=i + 1, column=0, sticky="ew", padx=12, pady=2)
+            nf = ctk.CTkFrame(scroll, fg_color="transparent")
+            nf.grid(row=i, column=0, sticky="ew", padx=4, pady=2)
             nf.grid_columnconfigure(0, weight=1)
 
             src   = item.get("source", "")
@@ -598,143 +596,112 @@ class MatchApp(ctk.CTk):
                          text_color=C["text"], anchor="w",
                          wraplength=380).grid(row=1, column=0, sticky="w")
 
-        outer.grid_rowconfigure(len(news) + 1, weight=1)
-
-    # ── Squad panel ───────────────────────────────────────────────────────
-    def _squad_panel(self, parent, team_name: str, accent: str, col: int):
-        """Fetch players for this team from Supabase and render them."""
+    # ── WC 2026 Results history ───────────────────────────────────────────
+    def _results_panel(self, parent, name_a: str, name_b: str,
+                       summary_a: str = "", summary_b: str = ""):
+        """Show WC 2026 finished matches for both teams side by side."""
         try:
             _ROOT = Path(__file__).parent.parent.parent
             if str(_ROOT) not in sys.path:
                 sys.path.insert(0, str(_ROOT))
             from shared.supabase_client import SupabaseClient
             db = SupabaseClient()
-            players = db.select("wc_players", filters={"team": team_name})
+            all_finished = db.select("wc_matches", filters={"status": "finished"})
+            all_finished.sort(key=lambda m: (m.get("match_date") or "", m.get("kickoff_time") or ""))
+
+            def team_matches(name):
+                return [m for m in all_finished
+                        if m.get("home_team") == name or m.get("away_team") == name]
+
+            matches_a = team_matches(name_a)
+            matches_b = team_matches(name_b)
         except Exception:
-            players = []
+            matches_a = matches_b = []
 
         outer = ctk.CTkFrame(parent, fg_color=C["card"], corner_radius=12)
-        outer.grid(row=0, column=col, sticky="nsew", padx=8, pady=4)
+        outer.grid(row=0, column=0, sticky="ew")
         outer.grid_columnconfigure(0, weight=1)
+        outer.grid_columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(outer, text=f"  {team_name}  SQUAD",
+        ctk.CTkLabel(outer, text="  🏆  WC 2026 — Match History",
                      font=ctk.CTkFont("Arial", 13, "bold"),
-                     text_color=accent).grid(row=0, column=0, sticky="w",
-                                             padx=16, pady=(12, 6))
+                     text_color=C["gold"]).grid(row=0, column=0, columnspan=2,
+                                                sticky="w", padx=16, pady=(10, 6))
 
-        if not players:
-            ctk.CTkLabel(outer, text="No squad data — run WC_players_sync",
-                         font=ctk.CTkFont("Arial", 11),
-                         text_color=C["muted"]).grid(row=1, column=0,
-                                                     padx=16, pady=(0, 12))
-            return
+        def _team_history(col, name, accent, matches, summary=""):
+            frame = ctk.CTkFrame(outer, fg_color="transparent")
+            frame.grid(row=1, column=col, sticky="nsew", padx=8, pady=(0, 8))
+            frame.grid_columnconfigure(0, weight=1)
 
-        pos_order = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
-        players_sorted = sorted(players,
-                                key=lambda p: (pos_order.get(p.get("position", "FWD"), 4),
-                                               p.get("shirt_number") or 99))
+            ctk.CTkLabel(frame, text=name,
+                         font=ctk.CTkFont("Arial", 11, "bold"),
+                         text_color=accent).grid(row=0, column=0, sticky="w", pady=(0, 2))
 
-        _POS_COLOR = {"GK": "#e3b341", "DEF": "#388bfd", "MID": "#3fb950", "FWD": "#f85149"}
+            next_row = 1
+            if summary:
+                ctk.CTkLabel(frame, text=summary,
+                             font=ctk.CTkFont("Arial", 10, "italic"),
+                             text_color=C["muted"], wraplength=500,
+                             justify="left", anchor="w",
+                             ).grid(row=next_row, column=0, sticky="w", pady=(0, 6))
+                next_row += 1
 
-        scroll = ctk.CTkScrollableFrame(outer, fg_color="transparent", height=200)
-        scroll.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 8))
-        scroll.grid_columnconfigure(0, weight=0)  # #
-        scroll.grid_columnconfigure(1, weight=0)  # pos pill
-        scroll.grid_columnconfigure(2, weight=1)  # name
-        scroll.grid_columnconfigure(3, weight=1)  # club
-
-        # column headers
-        for c_idx, hdr in enumerate(["#", "Pos", "Player", "Club / League"]):
-            ctk.CTkLabel(scroll, text=hdr,
-                         font=ctk.CTkFont("Arial", 10),
-                         text_color=C["muted"]).grid(row=0, column=c_idx,
-                                                     sticky="w", padx=(4, 8), pady=(0, 4))
-
-        for i, p in enumerate(players_sorted):
-            r = i + 1
-            shirt      = p.get("shirt_number") or ""
-            pos        = p.get("position", "")
-            name       = p.get("name", "")
-            club       = p.get("club") or "—"
-            league     = p.get("club_league") or ""
-            club_label = f"{club}  ·  {league}" if league else club
-            injured    = p.get("injured", False)
-            photo_url  = p.get("photo_url") or ""
-            rating     = p.get("overall_rating")
-            mv_eur     = p.get("market_value_eur")
-            mv_label   = (f"€{mv_eur/1e6:.0f}M" if mv_eur and mv_eur >= 1_000_000
-                          else f"€{mv_eur/1000:.0f}K" if mv_eur else "")
-
-            row_bg = "#1a2030" if i % 2 == 0 else "transparent"
-            rf = ctk.CTkFrame(scroll, fg_color=row_bg, corner_radius=4)
-            rf.grid(row=r, column=0, columnspan=6, sticky="ew", pady=1)
-            rf.grid_columnconfigure(0, weight=0)  # photo / initials
-            rf.grid_columnconfigure(1, weight=0)  # pos pill
-            rf.grid_columnconfigure(2, weight=1)  # name
-            rf.grid_columnconfigure(3, weight=1)  # club
-            rf.grid_columnconfigure(4, weight=0)  # rating badge
-            rf.grid_columnconfigure(5, weight=0)  # market value
-
-            # Player photo (circular) or initials fallback
-            photo_img = get_player_image(photo_url, size=44)
-            if photo_img:
-                ctk.CTkLabel(rf, image=photo_img, text="").grid(
-                    row=0, column=0, padx=(6, 6), pady=2)
-            else:
-                pos_col = _POS_COLOR.get(pos, C["muted"])
-                initials = "".join(w[0] for w in name.split()[:2]).upper()
-                init_frame = ctk.CTkFrame(rf, fg_color=pos_col, corner_radius=22,
-                                          width=44, height=44)
-                init_frame.grid(row=0, column=0, padx=(6, 6), pady=2)
-                init_frame.grid_propagate(False)
-                init_frame.grid_columnconfigure(0, weight=1)
-                init_frame.grid_rowconfigure(0, weight=1)
-                ctk.CTkLabel(init_frame, text=initials,
-                             font=ctk.CTkFont("Arial", 13, "bold"),
-                             text_color="#ffffff").grid(row=0, column=0)
-
-            pos_col = _POS_COLOR.get(pos, C["muted"])
-            pos_pill = ctk.CTkFrame(rf, fg_color=pos_col, corner_radius=4,
-                                    width=36, height=20)
-            pos_pill.grid(row=0, column=1, padx=(0, 8))
-            pos_pill.grid_propagate(False)
-            pos_pill.grid_columnconfigure(0, weight=1)
-            pos_pill.grid_rowconfigure(0, weight=1)
-            ctk.CTkLabel(pos_pill, text=pos,
-                         font=ctk.CTkFont("Arial", 9, "bold"),
-                         text_color="#ffffff").grid(row=0, column=0)
-
-            name_text = f"🚑 {name}" if injured else name
-            name_color = "#f85149" if injured else C["text"]
-            ctk.CTkLabel(rf, text=name_text,
-                         font=ctk.CTkFont("Arial", 12),
-                         text_color=name_color, anchor="w").grid(
-                             row=0, column=2, sticky="w", padx=(0, 8))
-
-            ctk.CTkLabel(rf, text=club_label,
-                         font=ctk.CTkFont("Arial", 11),
-                         text_color=C["muted"], anchor="w").grid(
-                             row=0, column=3, sticky="w", padx=(0, 4))
-
-            # Overall rating badge (color-coded: ≥85 gold, ≥75 green, else muted)
-            if rating:
-                rat_color = (C["gold"] if rating >= 85 else
-                             C["green"] if rating >= 75 else C["muted"])
-                rat_frame = ctk.CTkFrame(rf, fg_color=rat_color, corner_radius=6,
-                                         width=34, height=22)
-                rat_frame.grid(row=0, column=4, padx=(0, 4), pady=2)
-                rat_frame.grid_propagate(False)
-                rat_frame.grid_columnconfigure(0, weight=1)
-                rat_frame.grid_rowconfigure(0, weight=1)
-                ctk.CTkLabel(rat_frame, text=str(rating),
-                             font=ctk.CTkFont("Arial", 10, "bold"),
-                             text_color="#ffffff").grid(row=0, column=0)
-
-            if mv_label:
-                ctk.CTkLabel(rf, text=mv_label,
+            if not matches:
+                ctk.CTkLabel(frame, text="No matches played yet",
                              font=ctk.CTkFont("Arial", 10),
-                             text_color=C["muted"], anchor="e", width=52).grid(
-                                 row=0, column=5, padx=(0, 6))
+                             text_color=C["muted"]).grid(row=next_row, column=0, sticky="w")
+                return
+
+            scroll = ctk.CTkScrollableFrame(frame, fg_color="transparent", height=130)
+            scroll.grid(row=next_row, column=0, sticky="ew")
+            scroll.grid_columnconfigure(0, weight=1)  # date
+            scroll.grid_columnconfigure(1, weight=2)  # home
+            scroll.grid_columnconfigure(2, weight=0)  # score
+            scroll.grid_columnconfigure(3, weight=2)  # away
+            scroll.grid_columnconfigure(4, weight=0)  # result
+
+            for i, m in enumerate(matches):
+                date  = (m.get("match_date") or "")[:10]
+                home  = m.get("home_team", "")
+                away  = m.get("away_team", "")
+                hg    = m.get("home_goals")
+                ag    = m.get("away_goals")
+                score = f"{hg}–{ag}" if hg is not None and ag is not None else "–"
+
+                is_home = home == name
+                team_goals = hg if is_home else ag
+                opp_goals  = ag if is_home else hg
+                if team_goals is not None and opp_goals is not None:
+                    result     = "W" if team_goals > opp_goals else ("D" if team_goals == opp_goals else "L")
+                    res_color  = C["green"] if result == "W" else (C["yellow"] if result == "D" else C["team_b"])
+                    home_col   = C["green"] if hg > ag else (C["muted"] if hg == ag else C["team_b"])
+                    away_col   = C["green"] if ag > hg else (C["muted"] if hg == ag else C["team_b"])
+                else:
+                    result = ""; res_color = C["muted"]
+                    home_col = away_col = C["muted"]
+
+                row_bg = "#1a2030" if i % 2 == 0 else "transparent"
+                rf = ctk.CTkFrame(scroll, fg_color=row_bg, corner_radius=4)
+                rf.grid(row=i, column=0, columnspan=5, sticky="ew", pady=1)
+                rf.grid_columnconfigure(0, weight=0)
+                rf.grid_columnconfigure(1, weight=2)
+                rf.grid_columnconfigure(2, weight=0)
+                rf.grid_columnconfigure(3, weight=2)
+                rf.grid_columnconfigure(4, weight=0)
+
+                ctk.CTkLabel(rf, text=date, font=ctk.CTkFont("Arial", 9),
+                             text_color=C["muted"], width=70).grid(row=0, column=0, padx=(4, 6))
+                ctk.CTkLabel(rf, text=home, font=ctk.CTkFont("Arial", 11),
+                             text_color=home_col, anchor="e").grid(row=0, column=1, sticky="e", padx=(0, 6))
+                ctk.CTkLabel(rf, text=score, font=ctk.CTkFont("Arial", 12, "bold"),
+                             text_color=C["text"], width=40, anchor="center").grid(row=0, column=2)
+                ctk.CTkLabel(rf, text=away, font=ctk.CTkFont("Arial", 11),
+                             text_color=away_col, anchor="w").grid(row=0, column=3, sticky="w", padx=(6, 0))
+                ctk.CTkLabel(rf, text=result, font=ctk.CTkFont("Arial", 11, "bold"),
+                             text_color=res_color, width=24).grid(row=0, column=4, padx=(4, 6))
+
+        _team_history(0, name_a, C["team_a"], matches_a, summary_a)
+        _team_history(1, name_b, C["team_b"], matches_b, summary_b)
 
 
 def main():
